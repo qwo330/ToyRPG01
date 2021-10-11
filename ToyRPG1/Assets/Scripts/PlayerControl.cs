@@ -13,11 +13,11 @@ public enum EPlayerState
 
 public class PlayerControl : MonoBehaviour
 {
-    public float _Speed = 6.0f;
-    public float _JumpSpeed = 8.0f;
-    public float _Gravity = 10.0f;
-    public float _RotSpeed = 5.0f;
-    public float _AttackCoolTime = 2.0f; // 공격 애니메이션 시간
+    public  float _Speed = 6.0f;
+    public  float _JumpSpeed = 8.0f;
+    public  float _Gravity = 10.0f;
+    public  float _RotSpeed = 5.0f;
+    public  float _AttackCoolTime = 2.0f; // 공격 애니메이션 시간
     public float _AttackInputTime = 1.0f; // 2타 입력 대기 시간
     /*
      * 1타 공격 애니메이션 25프레임 x 1.0배속
@@ -36,10 +36,12 @@ public class PlayerControl : MonoBehaviour
     Camera playerCamera;
 
     Vector3 _moveDir;
+    [SerializeField]
     EPlayerState _currentState;
 
-    float _nextAttackTime = 0;
-    float _nextAttackInputTime = 0;
+    bool isAttack = false;
+    float combo = 0;
+    int currentHash = 0, prevHash = 0;
 
     void Start()
     {
@@ -51,21 +53,18 @@ public class PlayerControl : MonoBehaviour
 
         _moveDir = Vector3.zero;
         _currentState = EPlayerState.Idle;
-        
-        _nextAttackTime = 0;
     }
 
     void Update()
     {
+        //ShowCurrentAnimName();
         Attack();
         Move();
     }
 
     void Move()
     {
-        if (_currentState == EPlayerState.Die
-            || _currentState == EPlayerState.Hit
-            || _currentState == EPlayerState.Attack)
+        if (IsActionAble() == false)
         {
             return;
         }
@@ -110,298 +109,92 @@ public class PlayerControl : MonoBehaviour
         _controller.Move(_moveDir * Time.deltaTime);
     }
 
-    float combo = 0;
-    float _attackFinishTime = 0;
-    bool isNextAttack = false;
-    AnimatorStateInfo? attackStateInfo;
-    int namehash = 0;
-
     void Attack()
     {
+        bool attackFlag = false;
+
         if (Input.GetMouseButtonDown(0))
         {
-            //if (Time.time > _attackFinishTime)
-            //{
-            //    Debug.Log("reset combo");
-
-            //    combo = 0;
-            //    attackStateInfo = null;
-            //    namehash = 0;
-            //}
-
-            if (combo < 2)
+            // 최초 공격
+            if (combo == 0)
             {
-                // 공격 시작
-                if (combo == 0)
-                {
+                //Debug.LogError("attack !!");
 
+                attackFlag = true;
 
-                    SetPlayerAnimation(EPlayerState.Attack, combo);
-                    attackStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
-
-                    // namehash를 통해 애니메이션 교체여부 확인
-                    if (namehash != attackStateInfo.Value.shortNameHash)
-                    {
-                    Debug.Log("enter 1");
-                        namehash = attackStateInfo.Value.shortNameHash;
-                        combo += 1;
-
-                        _attackFinishTime = Time.time + attackStateInfo.Value.length + _AttackInputTime;
-                        Debug.Log("attack finish time1 : " + _attackFinishTime);
-                    }
-
-                }
-                else
-                {
-
-                    float progress = attackStateInfo.Value.normalizedTime;
-                    Debug.Log("progress  " + progress);
-
-                    if (progress > 0.4f)
-                    {
-                    Debug.Log("enter 2");
-
-                        SetPlayerAnimation(EPlayerState.Attack, combo);
-                        attackStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
-
-                        if (namehash != attackStateInfo.Value.shortNameHash)
-                        {
-                        Debug.Log("enter 3");
-                            namehash = attackStateInfo.Value.shortNameHash;
-                            combo += 1;
-
-                            _attackFinishTime = Time.time + attackStateInfo.Value.length + _AttackInputTime;
-                            Debug.Log("attack finish time2 : " + _attackFinishTime);
-                        }
-                    }
-                }
-
-            }
- 
-        }
-        else if (combo != 0)
-        {
-            if (Time.time > _attackFinishTime)
-            {
-                Debug.Log("reset combo");
-
-                combo = 0;
-                attackStateInfo = null;
-                namehash = 0;
-                SetPlayerAnimation(EPlayerState.Attack, 0);
-            }
-        }
-    }
-
-    void Attack4()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-            if (attackStateInfo != null)
-                Debug.Log("comb reset   " + attackStateInfo.Value.normalizedTime);
-
-
-            if (attackStateInfo != null && attackStateInfo.Value.normalizedTime > 1.0f)
-            {
+                combo = 1;
+                isAttack = true;
                 
-                    combo = 0;
-                    attackStateInfo = null;
-                    namehash = 0;
-                
-            }
-            else
-            {
-
-                if (attackStateInfo == null)
-                {
-                    isNextAttack = false;
-                    combo += 1;
-
-                    SetPlayerAnimation(EPlayerState.Attack, combo);
-                    attackStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
-                    namehash = attackStateInfo.Value.shortNameHash;
-                }
-                else
-                {
-                    attackStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
-                    float progress = attackStateInfo.Value.normalizedTime;
-                    Debug.Log("enter 1   " + progress);
-
-                    if (0.7f < progress && isNextAttack)// && namehash != attackStateInfo.Value.shortNameHash)
-                    {
-                        Debug.Log("enter 2");
-                        isNextAttack = false;
-                        combo += 1;
-
-                        SetPlayerAnimation(EPlayerState.Attack, combo);
-                        attackStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
-                        namehash = attackStateInfo.Value.shortNameHash;
-                    }
-                    else if(combo < 2)
-                    {
-                        Debug.Log("enter 3");
-                        isNextAttack = true;
-                    }
-
-                }
-            }
-            {
-                //if (combo == 0)
-                //{
-                //    // 공격 시작
-                //    combo += 1;
-                //    SetPlayerAnimation(EPlayerState.Attack, combo);
-
-                //    var animStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
-                //    float animTime = animStateInfo.length;
-                //    Debug.Log("animTime " + animTime);
-
-                //    _attackFinishTime = Time.time + animTime;
-                //}
-                //else if (_attackFinishTime < Time.time)
-                //{
-                //    // 연속 공격 애니메이션 진행
-                //    combo++;
-
-                //}
-                //else
-                //{
-                //    // 공격시간이 끝나서 콤보 초기화
-                //    combo = 0;
-                //}
-            }
-        }
-        //else //if (combo != 0)
-        //{
-        //    if (attackStateInfo != null && attackStateInfo.Value.normalizedTime >= 1.0f)
-        //    {
-        //        Debug.Log("combo reset");
-        //        combo = 0;
-        //        //attackStateInfo = null;
-        //        namehash = 0;
-        //    }
-        //}
-
-        //if (Time.time >= _nextAttackInputTime)
-        //{
-        //    if (Input.GetMouseButtonDown(0))
-        //    {
-        //        if (combo < 2)
-        //        {
-        //            _nextAttackTime = Time.time + _AttackCoolTime;
-        //            _nextAttackInputTime = Time.time + _AttackInputTime;
-
-        //            combo += 1;
-        //            SetPlayerAnimation(EPlayerState.Attack, combo);
-        //            var animStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
-
-        //            Debug.Log("Attack " + combo);
-        //        }
-        //        else
-        //            combo = 0;
-        //    }
-        //    else
-        //    {
-
-        //    }
-        //}
-        
-    }
-
-    void Attack3()
-    {
-        if (_currentState != EPlayerState.Idle && _currentState != EPlayerState.Attack)
-            return;
-
-        if(Time.time >= _nextAttackTime)
-        {
-            if (combo != 0) // 공격 초기화
-            {
-                Debug.Log("Combo Clear");
-                combo = 0;
                 SetPlayerAnimation(EPlayerState.Attack, combo);
-                ChangeState(EPlayerState.Idle);
 
-               // var a = _playerAnim.GetCurrentAnimatorClipInfo(0);
-               // a[0].
+                var stateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
+                currentHash = stateInfo.shortNameHash;
+                //Debug.LogError(phase + " time? " + stateInfo.length);
             }
-
-            if (Input.GetMouseButtonDown(0))
+            else // 연속으로 공격 입력이 올 때
             {
-                if (combo == 0)
+                // 다음 공격 입력 타이밍이고, 다음 모션이 있을 때
+                if (IsInputTime() && IsSameAnimation() == false)
                 {
-                    _nextAttackTime = Time.time + _AttackCoolTime;
-                    _nextAttackInputTime = Time.time + _AttackInputTime;
+                    attackFlag = true;
 
-                    SetPlayerAnimation(EPlayerState.Attack, ++combo);
-                    Debug.Log("Attack " + combo);
+                    prevHash = currentHash;
+
+                    combo++;
+                    SetPlayerAnimation(EPlayerState.Attack, combo);
+
+                    var stateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
+                    currentHash = stateInfo.shortNameHash;
+                    //Debug.LogError(phase + " time? " + stateInfo.length);
                 }
             }
-            
-        } // 공격 쿨타임 중일때
-        else if (Time.time < _nextAttackInputTime)
-        {
-            if(Input.GetMouseButtonDown(0))
-            {
-                _nextAttackTime = Time.time + _AttackCoolTime;
-                SetPlayerAnimation(EPlayerState.Attack, ++combo);
-
-                Debug.Log("Attack" + combo);
-            }
         }
 
-        //if (Input.GetMouseButtonDown(0))
-        //{
-        //    if (Time.time >= _nextAttackTime)
-        //    {
-        //        Debug.Log("Attack");
-        //        _nextAttackTime = Time.time + _AttackCoolTime;
-        //        //_nextAttackInputTime = Time.time + 
-        //        SetPlayerAnimation(EPlayerState.Attack, ++combo);
-        //    }
-        //    else if (combo == 1 && Time.time < _nextAttackTime)
-        //    {
-        //        _nextAttackTime = Time.time + _AttackCoolTime;
-        //        SetPlayerAnimation(EPlayerState.Attack, ++combo);
-        //    }
-        //}
+        // 공격이 종료될 때까지 다음 입력이 없을 때
+        // 애니메이션이 바로 끝나버려서(왠지 모르겠음)
+        // flag가 true이면 현재 루프에선 호출 하지 않는다.
+        if (isAttack && IsFinishTime() && attackFlag == false)
+        {
+            currentHash = 0;
+            prevHash = 0;
+
+            isAttack = false;
+            combo = 0;
+
+            SetPlayerAnimation(EPlayerState.Attack, combo);
+            SetPlayerAnimation(EPlayerState.Idle);
+
+            //Debug.LogError("FINISH !!");
+        }
     }
 
-    void Attack2()
+    bool IsInputTime()
     {
-        if (_currentState != EPlayerState.Idle && _currentState != EPlayerState.Attack)
-            return;
+        var animStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
 
-        if (Input.GetMouseButtonDown(0))
+        if (0.8f <= animStateInfo.normalizedTime && animStateInfo.normalizedTime < 1.0f)
         {
-            if (_nextAttackInputTime <= Time.time && Time.time < _nextAttackTime) // 2
-            {
-                Debug.Log("Attacking");
-            }
-            else if (Time.time < _nextAttackInputTime) // 1
-            {
-                Debug.Log("Attack 2");
-                _nextAttackTime = Time.time + _AttackCoolTime; // 공격했으니 대기시간도 증가
-                _nextAttackInputTime = Time.time; // 더 이상 input 받지 않게
-                SetPlayerAnimation(EPlayerState.Attack, 2);
-            }
-            else // Time.time >= _nextAttackTime
-            {
-                Debug.Log("Attack");
-                _nextAttackTime = Time.time + _AttackCoolTime;
-                _nextAttackInputTime = Time.time + _AttackInputTime;
-                SetPlayerAnimation(EPlayerState.Attack, 1);
-            }
+            return true;
         }
 
-        if (Time.time > _nextAttackTime)
-        {
-            SetPlayerAnimation(EPlayerState.Attack, 0);
-            ChangeState(EPlayerState.Idle);
-        }
+        return false;
     }
 
-    //float _animatorValue = 0f;
+    bool IsFinishTime()
+    {
+        var animStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
+        if (animStateInfo.normalizedTime >= 1.0f)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool IsSameAnimation()
+    {
+        return prevHash == currentHash;
+    }
 
     void ChangeState(EPlayerState nextState)
     {
@@ -420,9 +213,10 @@ public class PlayerControl : MonoBehaviour
                 _playerAnim.SetTrigger("Jump");
                 break;
             case EPlayerState.Attack:
-                _playerAnim.SetFloat("Combo", _animatorValue);
+                //_playerAnim.SetFloat("Combo", _animatorValue);
                 //_playerAnim.SetTrigger("Attack");
-                _playerAnim.SetBool("AttackB", _animatorValue != 0);
+                _playerAnim.SetBool("Attack", _animatorValue != 0);
+                _playerAnim.SetFloat("Combo", _animatorValue);
                 break;
             case EPlayerState.Hit:
                 break;
@@ -434,4 +228,112 @@ public class PlayerControl : MonoBehaviour
                 break;
         }
     }
+
+    bool IsActionAble()
+    {
+        return _currentState != EPlayerState.Die
+            && _currentState != EPlayerState.Hit
+            && _currentState != EPlayerState.Attack;
+    }
+
+    #region TEST METHODES
+    void ShowCurrentAnimName()
+    {
+        var stateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
+        // attack
+        if (stateInfo.IsName("Attack Blend Tree"))
+        {
+            Debug.Log("Attack Blend Tree");
+        }
+        else if (stateInfo.IsName("M attack 1"))
+        {
+            Debug.Log("M attack 1");
+        }
+        else if (stateInfo.IsName("K,P attack 2"))
+        {
+            Debug.Log("K,P attack 2");
+        }
+
+        // hit
+        else if (stateInfo.IsName("M hit"))
+        {
+            Debug.Log("M hit");
+        }
+
+        // idle
+        else if (stateInfo.IsName("M idle 2"))
+        {
+            Debug.Log("M idle 2");
+        }
+
+        // run
+        else if (stateInfo.IsName("K,M,P run"))
+        {
+            Debug.Log("K,M,P run");
+        }
+
+        // jump
+        else if (stateInfo.IsName("M defend"))
+        {
+            Debug.Log("M defend");
+        }
+    }
+
+    public void CheckAttackAnim()
+    {
+        var stateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
+        // attack
+        if (stateInfo.IsName("Attack Blend Tree"))
+        {
+            Debug.Log("Attack Blend Tree");
+        }
+        else if (stateInfo.IsName("M attack 1"))
+        {
+            Debug.Log("M attack 1");
+        }
+        else if (stateInfo.IsName("K,P attack 2"))
+        {
+            Debug.Log("K,P attack 2");
+        }
+        else
+            Debug.LogError("OTHEr..");
+    }
+
+    public void CheckAttackAnim(AnimatorStateInfo stateInfo)
+    {
+        // attack
+        if (stateInfo.IsName("Attack Blend Tree"))
+        {
+            Debug.Log("Attack Blend Tree");
+        }
+        else if (stateInfo.IsName("M attack 1"))
+        {
+            Debug.Log("M attack 1");
+        }
+        else if (stateInfo.IsName("K,P attack 2"))
+        {
+            Debug.Log("K,P attack 2");
+        }
+        else
+            Debug.LogError("OTHEr..");
+    }
+
+    string GetPhaseAnimName(float phase)
+    {
+        //return "Attack Blend Tree";
+        switch (phase - 1)
+        {
+            case 1:
+                Debug.Log("M attack 1");
+                return "M attack 1";
+            case 2:
+                Debug.Log("K,P attack 2");
+                return "K,P attack 2";
+            default:
+                Debug.Log("null");
+                return null;
+        }
+    }
+
+    #endregion
 }
