@@ -11,14 +11,18 @@ public enum EPlayerState
     Die,
 }
 
-public class PlayerControl : MonoBehaviour
+public class PlayerControl : SingletonMono<PlayerControl>
 {
-    public  float _Speed = 6.0f;
-    public  float _JumpSpeed = 8.0f;
-    public  float _Gravity = 10.0f;
-    public  float _RotSpeed = 5.0f;
-    public  float _AttackCoolTime = 2.0f; // 공격 애니메이션 시간
+    public float _Speed = 6.0f;
+    public float _JumpSpeed = 8.0f;
+    public float _Gravity = 10.0f;
+    public float _RotSpeed = 5.0f;
+    public float _AttackCoolTime = 2.0f; // 공격 애니메이션 시간
     public float _AttackInputTime = 1.0f; // 2타 입력 대기 시간
+
+    public float testStartAnim = 0.6f;
+    public float testEndAnim = 1f;
+    
     /*
      * 1타 공격 애니메이션 25프레임 x 1.0배속
      * 0.01667 * 25 = 0.41675 -> 0.4
@@ -35,13 +39,18 @@ public class PlayerControl : MonoBehaviour
     CharacterController _controller;
     Camera playerCamera;
 
-    Vector3 _moveDir;
+    Vector3 _motion;
+    
     [SerializeField]
     EPlayerState _currentState;
 
     bool isAttack = false;
     float combo = 0;
     int currentHash = 0, prevHash = 0;
+    
+    static readonly int HASH_JUMP = Animator.StringToHash("Jump");
+    static readonly int HASH_RUN = Animator.StringToHash("Run");
+    static readonly int HASH_COMBO = Animator.StringToHash("Combo");
 
     void Start()
     {
@@ -51,14 +60,27 @@ public class PlayerControl : MonoBehaviour
 
         playerCamera = Camera.main;
 
-        _moveDir = Vector3.zero;
+        _motion = Vector3.zero;
         _currentState = EPlayerState.Idle;
     }
 
+    EPlayerState playState = EPlayerState.Idle;
+    float animValue = 0;
+
     void Update()
     {
-        //ShowCurrentAnimName();
+        //if (Time.time - _lastClickTime > _comboDelay)
+        //{
+        //    _numClicks = 0;
+        //    attackIndex = 0;
+        //}
+
+        // todo : 초기에 playState를 Idle로 세팅하고, attack, move 등에서 playState를 교체한다.
+        // update의 마지막에 playState, animValue를 매개변수로 SetPlayerAnimation를 호출해서 이번 업데이트의 동작을 결정한다?
+
         Attack();
+
+        //Attack();
         Move();
     }
 
@@ -69,62 +91,122 @@ public class PlayerControl : MonoBehaviour
             return;
         }
 
-        if (_controller.isGrounded)
-        {
-            if (_currentState == EPlayerState.Jump)
-            {
-                SetPlayerAnimation(EPlayerState.Jump, 0);
-            }
+        EPlayerState animState = EPlayerState.Idle;
+        float animatorValue = 0;
 
+        if (_controller.isGrounded == false)
+        {
+            animState = EPlayerState.Idle;
+        }
+        else
+        {
             float horizontalInput = Input.GetAxis("Horizontal");
             float verticalInput = Input.GetAxis("Vertical");
 
-            Vector3 inputDir = new Vector3(horizontalInput, 0, verticalInput);
-            if (inputDir != Vector3.zero)
+            Vector3 input = new Vector3(horizontalInput, 0, verticalInput);
+            if (input != Vector3.zero)
             {
-                // rotate
-                Vector3 rotate = playerCamera.transform.TransformDirection(inputDir);
-                rotate.y = 0;
-
-                Quaternion rotation = Quaternion.LookRotation(rotate);
-                _Trans.rotation = rotation;
-
                 // move
-                _moveDir = rotate * _Speed;
-                SetPlayerAnimation(EPlayerState.Run, _moveDir.sqrMagnitude);
+                Vector3 forward = playerCamera.transform.TransformDirection(input);
+                forward.y = 0;
+                forward = forward.normalized;
+
+                _motion = forward * _Speed;
+
+                animState = EPlayerState.Run;
+                animatorValue = _motion.sqrMagnitude;
+
+                // rotate
+                Quaternion rotation = Quaternion.LookRotation(forward);
+                _Trans.rotation = rotation;
             }
             else // 조작 없을 때
             {
-                SetPlayerAnimation(EPlayerState.Idle);
+                _motion = Vector3.zero;
+                animState = EPlayerState.Idle;
             }
 
             if (Input.GetButton("Jump"))
             {
-                _moveDir.y = _JumpSpeed;
-                SetPlayerAnimation(EPlayerState.Jump);
+                _motion.y = _JumpSpeed;
+                animState = EPlayerState.Jump;
             }
         }
 
-        _moveDir.y -= _Gravity * Time.deltaTime;
-        _controller.Move(_moveDir * Time.deltaTime);
+        // always
+        _motion.y -= _Gravity * Time.deltaTime;
+        _controller.Move(_motion * Time.deltaTime);
+        SetPlayerAnimation(animState, animatorValue);
+
+        Debug.LogError($"animState : {animState}");
     }
+
+    int _numClicks = 0;
+    int curCombo = 0;
+    int attackIndex = 0;
+    float _lastClickTime = 0;
+    float _comboDelay = 1.2f;
 
     void Attack()
     {
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (_currentState == EPlayerState.Run)
+            {
+                SetStatMoveToIdle();
+            }
+            
+            if (_playerAnim.GetFloat("Combo") == 0)
+            {
+                SetPlayerAnimation(EPlayerState.Attack, 1);
+            }
+
+            //_lastClickTime = Time.time;
+            //_numClicks++;
+
+
+            //SetPlayerAnimation(EPlayerState.Attack, attackIndex);
+            //attackIndex++;
+
+            //if (_numClicks == 1)
+            //{
+            //    SetPlayerAnimation(EPlayerState.Attack, 1);
+            //    _numClicks = 0;
+
+            //    attackIndex = 0;
+            //}
+
+            //if (curCombo > 1 && curCombo >= _numClicks)
+            //{
+            //    SetPlayerAnimation(EPlayerState.Attack, curCombo);
+            //    curCombo = curCombo + 1;
+            //    _numClicks = curCombo + 1;
+            //}
+        }
+    }
+
+    void Attack_old()
+    {
+        /*
+         * 콤보어택 애니메이션 참고 링크
+         * https://answers.unity.com/questions/1192912/hot-to-make-combo-attack-1-button-do-3-things.html
+         * https://samirgeorgy.wordpress.com/2021/07/22/lets-create-a-simple-melee-combo-system/
+         */
+
         bool attackFlag = false;
 
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButton(0))
         {
             // 최초 공격
             if (combo == 0)
             {
-                //Debug.LogError("attack !!");
+                Debug.LogError("attack !!");
 
                 attackFlag = true;
 
                 combo = 1;
                 isAttack = true;
-                
+
                 SetPlayerAnimation(EPlayerState.Attack, combo);
 
                 var stateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
@@ -136,6 +218,7 @@ public class PlayerControl : MonoBehaviour
                 // 다음 공격 입력 타이밍이고, 다음 모션이 있을 때
                 if (IsInputTime() && IsSameAnimation() == false)
                 {
+
                     attackFlag = true;
 
                     prevHash = currentHash;
@@ -145,9 +228,17 @@ public class PlayerControl : MonoBehaviour
 
                     var stateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
                     currentHash = stateInfo.shortNameHash;
-                    //Debug.LogError(phase + " time? " + stateInfo.length);
+                    
+                    Debug.LogError(combo + " time? " + stateInfo.length);
                 }
             }
+        }
+
+        if (isAttack)
+        {
+            var animStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(1);
+            Debug.LogError($"=== anim hash : {animStateInfo.shortNameHash}, time : {animStateInfo.normalizedTime}");
+            //ShowCurrentAnimName();
         }
 
         // 공격이 종료될 때까지 다음 입력이 없을 때
@@ -161,18 +252,31 @@ public class PlayerControl : MonoBehaviour
             isAttack = false;
             combo = 0;
 
-            SetPlayerAnimation(EPlayerState.Attack, combo);
+            SetPlayerAnimation(EPlayerState.Attack, 0);
             SetPlayerAnimation(EPlayerState.Idle);
 
-            //Debug.LogError("FINISH !!");
+            Debug.LogError("FINISH !!");
         }
+    }
+
+    void FinishAttack()
+    {
+        currentHash = 0;
+        prevHash = 0;
+
+        isAttack = false;
+        combo = 0;
+
+        SetPlayerAnimation(EPlayerState.Idle);
+
+        Debug.LogError("FINISH !!");
     }
 
     bool IsInputTime()
     {
         var animStateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
 
-        if (0.8f <= animStateInfo.normalizedTime && animStateInfo.normalizedTime < 1.0f)
+        if (testStartAnim <= animStateInfo.normalizedTime && animStateInfo.normalizedTime < testEndAnim)
         {
             return true;
         }
@@ -198,25 +302,46 @@ public class PlayerControl : MonoBehaviour
 
     void ChangeState(EPlayerState nextState)
     {
+        // todo : 이걸로 상태 변경하고 프로세스를 통해 SetPlayerAnimation 호출하는게 좋을 듯
         _currentState = nextState;
     }
 
-    void SetPlayerAnimation(EPlayerState state, float _animatorValue = 0)
+    void SetStatMoveToIdle()
     {
+        // todo : 이동 중 공격을 하면 애니메이터가 꼬인다. (애니메이터는 run, 코드는 attack)
+        // ChangeState(EPlayerState.Idle);
+        SetPlayerAnimation(EPlayerState.Idle);
+    }
+
+    public void SetPlayerAnimation(EPlayerState state, float _animatorValue = 0)
+    {
+        if (_currentState != state)
+        {
+            var saveState = _currentState;
+            Debug.LogError($"Change State : {saveState} -> {state}");
+        }
+
+        // 뛰면서 바로 공격하면 멈춤, state가 attack이 되어 이동은 먹통, 애니메이션은 전환이 안됨
+        // 코드의 state는 바로 바뀌고 animation은 바뀌지 않아 버그 발생함
         _currentState = state;
+        
         switch (state)
         {
             case EPlayerState.Run:
-                _playerAnim.SetFloat("Run", _animatorValue);
+                _playerAnim.SetFloat(HASH_RUN, _animatorValue);
                 break;
             case EPlayerState.Jump:
-                _playerAnim.SetTrigger("Jump");
+                _playerAnim.SetTrigger(HASH_JUMP);
                 break;
             case EPlayerState.Attack:
                 //_playerAnim.SetFloat("Combo", _animatorValue);
                 //_playerAnim.SetTrigger("Attack");
-                _playerAnim.SetBool("Attack", _animatorValue != 0);
-                _playerAnim.SetFloat("Combo", _animatorValue);
+                _playerAnim.SetFloat(HASH_COMBO, _animatorValue);
+
+                if (_animatorValue == 0)
+                {
+                    FinishAttack();
+                }
                 break;
             case EPlayerState.Hit:
                 break;
@@ -224,7 +349,7 @@ public class PlayerControl : MonoBehaviour
                 break;
             default:
             case EPlayerState.Idle:
-                _playerAnim.SetFloat("Run", 0);
+                _playerAnim.SetFloat(HASH_RUN, 0);
                 break;
         }
     }
@@ -235,105 +360,4 @@ public class PlayerControl : MonoBehaviour
             && _currentState != EPlayerState.Hit
             && _currentState != EPlayerState.Attack;
     }
-
-    #region TEST METHODES
-    void ShowCurrentAnimName()
-    {
-        var stateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
-        // attack
-        if (stateInfo.IsName("Attack Blend Tree"))
-        {
-            Debug.Log("Attack Blend Tree");
-        }
-        else if (stateInfo.IsName("M attack 1"))
-        {
-            Debug.Log("M attack 1");
-        }
-        else if (stateInfo.IsName("K,P attack 2"))
-        {
-            Debug.Log("K,P attack 2");
-        }
-
-        // hit
-        else if (stateInfo.IsName("M hit"))
-        {
-            Debug.Log("M hit");
-        }
-
-        // idle
-        else if (stateInfo.IsName("M idle 2"))
-        {
-            Debug.Log("M idle 2");
-        }
-
-        // run
-        else if (stateInfo.IsName("K,M,P run"))
-        {
-            Debug.Log("K,M,P run");
-        }
-
-        // jump
-        else if (stateInfo.IsName("M defend"))
-        {
-            Debug.Log("M defend");
-        }
-    }
-
-    public void CheckAttackAnim()
-    {
-        var stateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
-        // attack
-        if (stateInfo.IsName("Attack Blend Tree"))
-        {
-            Debug.Log("Attack Blend Tree");
-        }
-        else if (stateInfo.IsName("M attack 1"))
-        {
-            Debug.Log("M attack 1");
-        }
-        else if (stateInfo.IsName("K,P attack 2"))
-        {
-            Debug.Log("K,P attack 2");
-        }
-        else
-            Debug.LogError("OTHEr..");
-    }
-
-    public void CheckAttackAnim(AnimatorStateInfo stateInfo)
-    {
-        // attack
-        if (stateInfo.IsName("Attack Blend Tree"))
-        {
-            Debug.Log("Attack Blend Tree");
-        }
-        else if (stateInfo.IsName("M attack 1"))
-        {
-            Debug.Log("M attack 1");
-        }
-        else if (stateInfo.IsName("K,P attack 2"))
-        {
-            Debug.Log("K,P attack 2");
-        }
-        else
-            Debug.LogError("OTHEr..");
-    }
-
-    string GetPhaseAnimName(float phase)
-    {
-        //return "Attack Blend Tree";
-        switch (phase - 1)
-        {
-            case 1:
-                Debug.Log("M attack 1");
-                return "M attack 1";
-            case 2:
-                Debug.Log("K,P attack 2");
-                return "K,P attack 2";
-            default:
-                Debug.Log("null");
-                return null;
-        }
-    }
-
-    #endregion
 }

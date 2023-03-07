@@ -5,13 +5,15 @@ using System;
 
 public static class MyUtil
 {
-    public static T FindbyConditions<T>(this List<T> list, Func<T, bool> conditional)
+    public static T FindbyCondition<T>(this List<T> list, Func<T, bool> conditional)
     {
         int listCount = list.Count;
         for (int i = 0; i < listCount; ++i)
         {
-            if (conditional(list[i]) == true)
+            if (conditional(list[i]))
+            {
                 return list[i];
+            }
         }
 
         return default;
@@ -32,24 +34,35 @@ public static class MyUtil
     }
 }
 
-public static class WaitTimeChache
+public static class WaitTimeCache
 {
     public static readonly WaitForEndOfFrame EndFrame = new WaitForEndOfFrame();
 
-    static readonly WaitForSeconds tick = new WaitForSeconds(0.01f);
+    static readonly WaitForSecondsRealtime realTick = new WaitForSecondsRealtime(0.01f);
+
     public static IEnumerator<WaitForSeconds> WaitForSeconds(float seconds)
+    {
+        float t = 0;
+        while (t < seconds)
+        {
+            t += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    public static IEnumerator<WaitForSecondsRealtime> WaitForSecondsRealtime(float seconds)
     {
         int loopCount = (int)seconds * 100;
         for (int i = 0; i < loopCount; i++)
         {
-            yield return tick;
+            yield return realTick;
         }
     }
 
-    public static IEnumerator TimerCallbackCoroutine(float time, Action action)
+    public static IEnumerator TimerCallbackCoroutine(float seconds, Action action)
     {
         float t = 0;
-        while (t < time)
+        while (t < seconds)
         {
             t += Time.deltaTime;
             yield return null;
