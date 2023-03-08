@@ -8,7 +8,7 @@ public enum EPlayerState
     Jump,
     Attack,
     Hit,
-    Die,
+    Dead,
 }
 
 public class PlayerControl : SingletonMono<PlayerControl>
@@ -345,7 +345,7 @@ public class PlayerControl : SingletonMono<PlayerControl>
                 break;
             case EPlayerState.Hit:
                 break;
-            case EPlayerState.Die:
+            case EPlayerState.Dead:
                 break;
             default:
             case EPlayerState.Idle:
@@ -356,7 +356,7 @@ public class PlayerControl : SingletonMono<PlayerControl>
 
     bool IsActionAble()
     {
-        return _currentState != EPlayerState.Die
+        return _currentState != EPlayerState.Dead
             && _currentState != EPlayerState.Hit
             && _currentState != EPlayerState.Attack;
     }
