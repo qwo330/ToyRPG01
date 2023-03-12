@@ -9528,6 +9528,7 @@ GameObject:
   - component: {fileID: 8200000}
   - component: {fileID: 19998132}
   - component: {fileID: 19847614}
+  - component: {fileID: 4365711112982892642}
   m_Layer: 0
   m_Name: ArcaneProjectileSmall
   m_TagString: Untagged
@@ -14428,6 +14429,19 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
     vectorLabel1_3: W
+--- !u!114 &4365711112982892642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100006}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7c72dd3aa356e246bdefadf7ccb66e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  speed: 0
 --- !u!1 &100010
 GameObject:
   m_ObjectHideFlags: 0

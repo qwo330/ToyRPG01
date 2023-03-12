@@ -111,15 +111,50 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bac5ad5f23ea267469333e0db7547d89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _Speed: 3
-  _JumpSpeed: 5
-  _Gravity: 10
-  _RotSpeed: 5
-  _AttackCoolTime: 1
-  _AttackInputTime: 0.5
-  _Trans: {fileID: 0}
-  _FollowTarget: {fileID: 0}
-  _currentState: 0
+  MaxHP: 0
+  HP: 0
+  attackPoint: {fileID: 4981659018673241104}
+  ProjectilePrefab: {fileID: 4365711112982892642, guid: d39f07caa24f6cf44b594176f30afa1b,
+    type: 3}
+  Speed: 6
+  RotSpeed: 5
+  JumpSpeed: 8
+  Gravity: 10
+  AttackCoolTime: 2
+  AttackInputTime: 1
+  Trans: {fileID: 0}
+  FollowTarget: {fileID: 0}
+  currentState: 0
+--- !u!1 &6269188950276475047
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4981659018673241104}
+  m_Layer: 0
+  m_Name: AttackPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4981659018673241104
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6269188950276475047}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.00044, y: 0.00999, z: -0.0028}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 3362591353888716786}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &3362591353888320804
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -196,6 +231,12 @@ PrefabInstance:
 --- !u!4 &3362591353888716790 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400082, guid: 9328a35a213359b43a0325d73a30b18c,
+    type: 3}
+  m_PrefabInstance: {fileID: 3362591353888320804}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &3362591353888716786 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 400086, guid: 9328a35a213359b43a0325d73a30b18c,
     type: 3}
   m_PrefabInstance: {fileID: 3362591353888320804}
   m_PrefabAsset: {fileID: 0}
