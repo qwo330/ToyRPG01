@@ -32,9 +32,11 @@ public class AddressableTool : SingletonMono<AddressableTool>
             return default;
         }
         
-        string address = $"Assets/Bundles/{assetPath}";
+        string address = $"Assets/Bundles/Prefabs/{assetPath}";
      
-        return Resources.Load<T>(address); // 어드레서블 세팅 전 임시처리
+        // 어드레서블 세팅 전 임시처리
+        // return Resources.Load<T>(address);
+        return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(address);
         
         // 하단 코드는 어드레서블 세팅 전까지 동작하지 않음
 #if ADDRESSABLES
