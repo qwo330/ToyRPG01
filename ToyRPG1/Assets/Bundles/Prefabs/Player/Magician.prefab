@@ -95,7 +95,7 @@ CharacterController:
   m_Height: 1
   m_Radius: 0.3
   m_SlopeLimit: 45
-  m_StepOffset: 0.3
+  m_StepOffset: 0.1
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.03, z: 0}
@@ -116,7 +116,7 @@ MonoBehaviour:
   attackPoint: {fileID: 4981659018673241104}
   ProjectilePrefab: {fileID: 4365711112982892642, guid: d39f07caa24f6cf44b594176f30afa1b,
     type: 3}
-  Speed: 6
+  WalkSpeed: 5
   RotSpeed: 5
   JumpSpeed: 8
   Gravity: 10
@@ -124,6 +124,7 @@ MonoBehaviour:
   AttackInputTime: 1
   Trans: {fileID: 0}
   FollowTarget: {fileID: 0}
+  prevState: 0
   currentState: 0
 --- !u!1 &6269188950276475047
 GameObject:

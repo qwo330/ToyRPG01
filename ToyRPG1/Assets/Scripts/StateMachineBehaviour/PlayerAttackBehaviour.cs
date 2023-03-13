@@ -28,12 +28,13 @@ public class PlayerAttackBehaviour : StateMachineBehaviour
             numOfClick++;
         }
 
-        if (0.95f < stateInfo.normalizedTime && callNextState == false)
+        if (0.6f < stateInfo.normalizedTime && callNextState == false)
         {
             callNextState = true;
 
             int attackValue = (isLastIndex || numOfClick == 0) ? 0 : attackIndex + 1;
-            PlayerControl.Instance.SetPlayerAnimation(EPlayerState.Attack, attackValue);
+            PlayerControl.Player.ChangeState(EPlayerState.Attack, attackValue);
+            PlayerControl.Player.PlayAttack();
         }
     }
 
