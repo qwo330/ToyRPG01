@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Monster
   - NPC
+  - Map
   layers:
   - Default
   - TransparentFX
