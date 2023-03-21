@@ -9,6 +9,7 @@ public abstract class Actor : MonoBehaviour
     
     public abstract void Move();
     public abstract void Attack();
+    public abstract void Dead();
 
     public void TakeDamage(int power)
     {
@@ -19,16 +20,12 @@ public abstract class Actor : MonoBehaviour
             Dead();
         }
     }
-
-    public void Dead()
-    {
-        MyDebug.LogError($"{gameObject.name} 죽음");
-    }
 }
 
 public enum EActorState
 {
-    Idle = 0,
+    None = 0,
+    Idle,
     Run,
     Jump,
     Attack,
