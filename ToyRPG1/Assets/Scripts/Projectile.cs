@@ -71,7 +71,7 @@ public class Projectile : MonoBehaviour
             MyDebug.LogError("Power is not set");
         }
         
-        target.TakeDamage(power);
+        target.TakeDamage(target, power);
         OnReturnToPool();
     }
     

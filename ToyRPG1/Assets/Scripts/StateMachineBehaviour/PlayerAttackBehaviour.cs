@@ -18,6 +18,8 @@ public class PlayerAttackBehaviour : StateMachineBehaviour
     {
         numOfClick = 0;
         callNextState = false;
+        
+        PlayerControl.Player.StartAttack();
     }
 
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks

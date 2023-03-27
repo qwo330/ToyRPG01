@@ -11,7 +11,7 @@ public abstract class Actor : MonoBehaviour
     public abstract void Attack();
     public abstract void Dead();
 
-    public void TakeDamage(int power)
+    public virtual void TakeDamage(Actor enemy, int power)
     {
         HP -= power;
         
@@ -33,7 +33,6 @@ public enum EActorState
     Dead,
     
     // player 외의 행동
-    Spawn = 100,
-    StandBy, // 대기 모션
+    StandBy = 100, // 대기 모션
     Roam,
 }

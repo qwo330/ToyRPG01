@@ -22,8 +22,8 @@ public class MyObjectPool<T> where T : MonoBehaviour
         this.assetPath = assetPath;
     }
     
-    IObjectPool<T> pool;
-    public IObjectPool<T> Pool
+    ObjectPool<T> pool;
+    public ObjectPool<T> Pool
     {
         get
         {

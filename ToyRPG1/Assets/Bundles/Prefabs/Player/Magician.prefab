@@ -40,10 +40,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3362591354650287452}
-  - component: {fileID: 3362591354650287454}
-  - component: {fileID: 3362591354650287455}
   - component: {fileID: 3362591354650287448}
-  m_Layer: 0
+  - component: {fileID: -7594726017359716714}
+  - component: {fileID: 3362591354650287455}
+  - component: {fileID: 3362591354650287454}
+  m_Layer: 3
   m_Name: Magician
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -65,6 +66,67 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3362591354650287448
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3362591354650287453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bac5ad5f23ea267469333e0db7547d89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  MaxHP: 0
+  HP: 0
+  attackPoint: {fileID: 4981659018673241104}
+  scanner: {fileID: -7594726017359716714}
+  WalkSpeed: 5
+  RotSpeed: 5
+  JumpSpeed: 7
+  Gravity: 20
+  AttackCoolTime: 2
+  AttackInputTime: 1
+  Trans: {fileID: 0}
+  FollowTarget: {fileID: 0}
+  prevState: 0
+  currentState: 0
+--- !u!114 &-7594726017359716714
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3362591354650287453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27200d8c4d89446aa82fc39bd9903447, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scanRadius: 5
+  targetLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  scanMaxCount: 10
+--- !u!143 &3362591354650287455
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3362591354650287453}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Height: 1
+  m_Radius: 0.3
+  m_SlopeLimit: 45
+  m_StepOffset: 0.2
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0.03, z: 0}
 --- !u!54 &3362591354650287454
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -81,51 +143,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!143 &3362591354650287455
-CharacterController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3362591354650287453}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Height: 1
-  m_Radius: 0.3
-  m_SlopeLimit: 45
-  m_StepOffset: 0.1
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0.03, z: 0}
---- !u!114 &3362591354650287448
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3362591354650287453}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bac5ad5f23ea267469333e0db7547d89, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  MaxHP: 0
-  HP: 0
-  attackPoint: {fileID: 4981659018673241104}
-  ProjectilePrefab: {fileID: 4365711112982892642, guid: d39f07caa24f6cf44b594176f30afa1b,
-    type: 3}
-  WalkSpeed: 5
-  RotSpeed: 5
-  JumpSpeed: 8
-  Gravity: 10
-  AttackCoolTime: 2
-  AttackInputTime: 1
-  Trans: {fileID: 0}
-  FollowTarget: {fileID: 0}
-  prevState: 0
-  currentState: 0
 --- !u!1 &6269188950276475047
 GameObject:
   m_ObjectHideFlags: 0
