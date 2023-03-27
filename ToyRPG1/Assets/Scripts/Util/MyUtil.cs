@@ -32,6 +32,20 @@ public static class MyUtil
             list[cnt] = value;
         }
     }
+
+    public static Vector3 ConvertXYtoXZ(this Vector2 xy)
+    {
+        Vector3 result = new Vector3(xy.x, 0, xy.y);
+
+        return result;
+    }
+
+    public static Vector3 NormalizedXZ(this Vector3 vector)
+    {
+        vector.y = 0;
+
+        return vector;
+    }
 }
 
 public static class WaitTimeCache
