@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3050909460189503107}
   - component: {fileID: 3050909460189503110}
+  - component: {fileID: -8111378247138458444}
   - component: {fileID: 3050909460189503109}
   - component: {fileID: 3050909460189503108}
   m_Layer: 6
@@ -46,8 +47,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80c521df8f619e64298fd290e014fe3e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  MaxHP: 0
+  MaxHP: 5
   HP: 0
+  scanner: {fileID: -8111378247138458444}
   Speed: 6
   RotSpeed: 5
   RoamingRadius: 3
@@ -56,6 +58,23 @@ MonoBehaviour:
   AttackCoolTime: 2
   AttackRange: 1
   Trans: {fileID: 0}
+--- !u!114 &-8111378247138458444
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3050909460189503111}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27200d8c4d89446aa82fc39bd9903447, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scanRadius: 7
+  targetLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  scanMaxCount: 10
 --- !u!143 &3050909460189503109
 CharacterController:
   m_ObjectHideFlags: 0

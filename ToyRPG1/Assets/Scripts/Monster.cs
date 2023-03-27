@@ -8,7 +8,9 @@ using static Cysharp.Threading.Tasks.UniTask;
 
 public class Monster : Actor
 {
-    public float Speed = 6.0f;
+    [SerializeField] ActorScanner scanner;
+    
+    public float WalkSpeed = 6.0f;
     public float RotSpeed = 5.0f;
     public float RoamingRadius = 3.0f;
 
@@ -31,147 +33,184 @@ public class Monster : Actor
     {
         set => pool = value;
     }
-    
-    Actor target;
+
+    Dictionary<Actor, int> actorContributionDictionary; // 각 액터의 기여도 및 위협도 관리
+
+    [SerializeField] Actor target;
     public Actor Target
     {
         set => target = value;
     }
 
     [HideInInspector] public Transform Trans;
-    Animator playerAnim;
+    Animator monsterAnim;
     CharacterController controller;
 
+    bool isInit = false;
+    
+    static readonly int HASH_RUN = Animator.StringToHash("Run");
+    static readonly int HASH_ATTACK = Animator.StringToHash("Attack");
+    static readonly int HASH_HIT = Animator.StringToHash("Hit");
+    static readonly int HASH_DEAD = Animator.StringToHash("Dead");
+    
     void Start()
     {
         Init();
+        MyDebug.LogError("Monster Pos Start");
     }
 
     void Update()
     {
-        if (currentState != EActorState.None && currentState != EActorState.Spawn)
+        if (currentState != EActorState.None)
         {
+            Target = scanner.GetTarget();
+            
             Attack();
             Move();
         }
     }
 
-    void Init()
+    public void Init()
     {
+        if (isInit)
+        {
+            return;
+        }
+        
+        isInit = true;
+
         Trans = GetComponent<Transform>();
         controller = GetComponent<CharacterController>();
-        playerAnim = GetComponentInChildren<Animator>();
+        monsterAnim = GetComponentInChildren<Animator>();
+
+        actorContributionDictionary = new Dictionary<Actor, int>();
 
         MyDebug.Log("[Monster] Init");
     }
 
-    void Clear(Vector3 spawnPoint)
+    void ClearData()
     {
         Target = null;
-
+        
         ChangeState(EActorState.None);
         motion = Vector3.zero;
 
-        MyDebug.Log("[Monster] Clear");
+        actorContributionDictionary.Clear();
+        
+        HP = MaxHP;
+        startingPoint = Vector3.zero;
+        
+        MyDebug.Log("[Monster] Clear Data");
     }
 
     public void SpawnMonster(Vector3 spawnPoint)
     {
         // todo : 스폰 애니메이션 및 몬스터 초기화 진행
-
-
+        Init();
+        ClearData();
+        
         startingPoint = spawnPoint;
-        transform.position = spawnPoint;
-        MyDebug.Log($"[Monster] spawn, monster pos : {transform.position}");
-
-
-        Clear(spawnPoint);
-        ChangeState(EActorState.Spawn);
-
+        
         ActivateMonster();
+        
+        MyDebug.Log($"[Monster] spawn monster");
     }
 
     async UniTaskVoid ActivateMonster()
     {
         // todo : 몬스터 스폰 완료 및 활동 개시
-        await UniTask.WaitUntil(() => currentState == EActorState.Idle);
+        transform.position = startingPoint;
+
+        await UniTask.WaitUntil(() => gameObject.activeSelf);
+
         ChangeState(EActorState.Idle);
-    }
-
-    void ChangeState(EActorState nextState)
-    {
-        MyDebug.Log($"[Monster] Change State : {currentState} -> {nextState}");
-
-        currentState = nextState;
     }
 
     public override void Move()
     {
+        motion = Vector3.zero;
+        
         // 전략패턴 사용?
         // 점프는 일단 보류
-        if (target == null)
-        {
-            if (currentState != EActorState.Roam)
-            {
-                StartRoam();
-            }
 
-            Roam();
+        if (controller.isGrounded)
+        {
+            if (target == null)
+            {
+                Roam();
+            }
+            else
+            {
+                MoveTarget();
+            }
+        }
+
+        // always
+        UseGravity();
+
+        controller.Move(motion * Time.deltaTime);
+    }
+
+    void UseGravity()
+    {
+        if (controller.isGrounded)
+        {
+            return;
+        }
+        
+        motion.y -= Gravity * Time.deltaTime;
+    }
+    
+    void Roam()
+    {
+        if (currentState != EActorState.Roam)
+        {
+            Vector3 insidePoint = Random.insideUnitCircle.ConvertXYtoXZ();
+
+            destinationPoint = startingPoint + (insidePoint * RoamingRadius);
+            ChangeState(EActorState.Roam);
+            MyDebug.LogError($"Roaming {startingPoint} -> {destinationPoint}");
+        }
+        
+        // todo : 시작점을 기준으로 배회
+        Vector3 normalDirection = (destinationPoint - startingPoint).NormalizedXZ();
+        
+        motion = normalDirection * WalkSpeed;
+
+        // rotate
+        Quaternion rotation = Quaternion.LookRotation(normalDirection);
+        Trans.rotation = rotation;
+
+        //controller.Move(motion);
+
+        float sqrDist = (destinationPoint - transform.position).sqrMagnitude;
+        MyDebug.LogError($"Check Finish : {sqrDist}");
+        if (sqrDist < 2.4f) // 도착 검증할 임시 값
+        {
+            MyDebug.LogError("Roaming FINISH");
+            ChangeState(EActorState.Idle);
         }
         else
         {
-            MoveTarget();
+            MyDebug.LogError("Roaming ...");
         }
-    }
-
-    void StartRoam()
-    {
-        destinationPoint = startingPoint + (Random.insideUnitSphere * RoamingRadius);
-        ChangeState(EActorState.Roam);
-    }
-
-    void Roam()
-    {
-        // todo : 시작점을 기준으로 배회
-        Vector3 forward = destinationPoint - startingPoint;
-        forward.y = 0;
-        forward = forward.normalized;
-
-        motion = forward * Speed;
-
-        // rotate
-        Quaternion rotation = Quaternion.LookRotation(forward);
-        Trans.rotation = rotation;
-
-        controller.Move(motion);
-
-        float sqrDist = (destinationPoint - transform.position).sqrMagnitude;
-        if (sqrDist < 0.01f) // 도착 검증할 임시 값
-        {
-            MyDebug.LogError("FINISH");
-            ChangeState(EActorState.Idle);
-        }
-    }
-
-    public void SetTarget(Actor newTarget)
-    {
-        this.target = newTarget;
     }
 
     void MoveTarget()
     {
-        Vector3 forward = target.transform.position - transform.position;
-        forward.y = 0;
-        forward = Vector3.forward.normalized;
+        MyDebug.LogError($"Move to Target : {target.name}");
 
-        Vector3 motion = forward * Speed;
-        Quaternion rotation = Quaternion.LookRotation(forward);
+        Vector3 normalDirection = (target.transform.position - transform.position).NormalizedXZ();
+
+        motion = normalDirection * WalkSpeed;
+        Quaternion rotation = Quaternion.LookRotation(normalDirection);
         Trans.rotation = rotation;
 
         // always
-        motion.y -= Gravity * Time.deltaTime;
-        controller.Move(motion * Time.deltaTime);
-        ChangeAnimation(EActorState.Run);
+        // motion.y -= Gravity * Time.deltaTime;
+        // controller.Move(motion * Time.deltaTime);
+        
+        ChangeState(EActorState.Run);
     }
 
     public bool CheckInAttackRange()
@@ -194,8 +233,34 @@ public class Monster : Actor
 
         // todo : 공격 처리와 애니메이션
         MyDebug.LogError("Attack!");
+        ChangeState(EActorState.Attack);
     }
 
+    public override void TakeDamage(Actor enemy, int power)
+    {
+        UpdateContribution(enemy, power);
+        base.TakeDamage(enemy, power);
+    }
+
+    void UpdateContribution(Actor actor, int power)
+    {
+        if (actorContributionDictionary.ContainsKey(actor))
+        {
+            actorContributionDictionary[actor] += power;
+        }
+        else
+        {
+            actorContributionDictionary[actor] = power;
+        }
+    }
+    
+    void ChangeState(EActorState nextState)
+    {
+        MyDebug.Log($"[Monster] Change State : {currentState} -> {nextState}");
+
+        currentState = nextState;
+    }
+    
     public void ChangeAnimation(EActorState newState)
     {
         if (prevState != newState)
@@ -211,12 +276,30 @@ public class Monster : Actor
     void ChangeAnimationParameter(EActorState newState)
     {
         switch (newState)
-        {
-            case EActorState.Spawn:
+        {            
+            case EActorState.Idle:
+                monsterAnim.SetFloat(HASH_RUN, 0);
+                break;
+            
+            case EActorState.Run:
+            case EActorState.Roam:
+                monsterAnim.SetFloat(HASH_RUN, 1);
+                break;
+            
+            case EActorState.Attack:
+                monsterAnim.SetTrigger(HASH_ATTACK);
+                break;
+            
+            case EActorState.Hit:
+                monsterAnim.SetTrigger(HASH_HIT);
+                break;
+            
+            case EActorState.Dead:
+                monsterAnim.SetBool(HASH_DEAD, true);
                 break;
 
             default:
-            case EActorState.Idle:
+                MyDebug.LogWarning($"UnDefined State : {newState}");
                 break;
         }
     }
@@ -232,4 +315,13 @@ public class Monster : Actor
     {
         pool.Release(this);
     }
+
+    #if UNITY_EDITOR
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawLine(startingPoint, destinationPoint);
+    }
+    
+    #endif
 }

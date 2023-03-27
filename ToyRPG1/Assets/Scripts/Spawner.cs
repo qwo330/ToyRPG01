@@ -7,6 +7,7 @@ using static Cysharp.Threading.Tasks.UniTask;
 public class Spawner : MonoBehaviour
 {
     [SerializeField] int msSpawnTime = 5000;
+    [SerializeField] int spawnMaxCount = 2;
     [SerializeField] string spawnMonsterPath = "Monster/Zombie.prefab";
     MyObjectPool<Monster> spawnMonsterPool;
     
@@ -43,7 +44,7 @@ public class Spawner : MonoBehaviour
     void OnDestroy()
     {
         OnDisable();
-        GameManager.Instance.RemoveSpawner(this);
+        GameManager.Instance?.RemoveSpawner(this);
     }
 
     public void CreateSpawner(string monsterPath, int msSpawnTime)
@@ -97,20 +98,23 @@ public class Spawner : MonoBehaviour
         {
             await Delay(msSpawnTime, cancellationToken: disableCancellation.Token);
 
+            if (spawnMonsterPool.Pool.CountActive >= spawnMaxCount)
+            {
+                continue;    
+            }
+            
             Monster monster = spawnMonsterPool.Get();
             if (monster == null)
             {
                 continue;
             }
             
-            MyDebug.LogError($"spawn monster, monster pos : {monster.transform.position}, spawner pos : {transform.position}");
-
             monster.Pool = spawnMonsterPool;
             monster.SpawnMonster(transform.position);
             spawnedMonsterCount++;
             
             #if UNITY_EDITOR
-            monster.name = $"{monster.name}_{++nameIndex}";
+            monster.name = $"{monster.name} {++nameIndex}";
 #endif
         }
     }

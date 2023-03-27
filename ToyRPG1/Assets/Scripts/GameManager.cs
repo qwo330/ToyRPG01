@@ -63,7 +63,7 @@ public class GameManager : SingletonMono<GameManager>
 
     public void GameStart()
     {
-        MyDebug.LogError("Game Start");
+        MyDebug.Log("Game Start");
         currentState = EGameState.Play;
 
         foreach (Spawner VARIABLE in spawnerList)
