@@ -10,6 +10,8 @@ public class Monster : Actor
 {
     [SerializeField] ActorScanner scanner;
     
+    public float distOffset = 0.1f;
+    public float ChasingRadius = 10f;
     public float WalkSpeed = 6.0f;
     public float RotSpeed = 5.0f;
     public float RoamingRadius = 3.0f;
@@ -17,6 +19,8 @@ public class Monster : Actor
     public float JumpSpeed = 8.0f;
     public float Gravity = 10.0f;
 
+    public int attackPower = 1;
+    
     public float AttackCoolTime = 2.0f; // 공격 애니메이션 시간
     [Tooltip("제곱된 거리")] public float AttackRange = 1.0f;
 
@@ -56,7 +60,7 @@ public class Monster : Actor
     void Start()
     {
         Init();
-        MyDebug.LogError("Monster Pos Start");
+        MyDebug.LogError($"Monster Pos Start, {transform.position}");
     }
 
     void Update()
@@ -65,8 +69,16 @@ public class Monster : Actor
         {
             Target = scanner.GetTarget();
             
-            Attack();
-            Move();
+            // MyDebug.LogWarning($"update {gameObject.name} pos : {transform.position}");
+            
+            if (CheckInAttackRange())
+            {
+                Attack();
+            }
+            else
+            {
+                Move();
+            }        
         }
     }
 
@@ -120,6 +132,7 @@ public class Monster : Actor
     {
         // todo : 몬스터 스폰 완료 및 활동 개시
         transform.position = startingPoint;
+        MyDebug.LogError($"Active Monster : {transform.position} -> {startingPoint}");
 
         await UniTask.WaitUntil(() => gameObject.activeSelf);
 
@@ -160,7 +173,7 @@ public class Monster : Actor
         
         motion.y -= Gravity * Time.deltaTime;
     }
-    
+
     void Roam()
     {
         if (currentState != EActorState.Roam)
@@ -169,38 +182,48 @@ public class Monster : Actor
 
             destinationPoint = startingPoint + (insidePoint * RoamingRadius);
             ChangeState(EActorState.Roam);
-            MyDebug.LogError($"Roaming {startingPoint} -> {destinationPoint}");
+            
+            MyDebug.Log($"[Monster] {gameObject.name} Set Roaming : {transform.position} -> {destinationPoint}");
         }
-        
+
         // todo : 시작점을 기준으로 배회
-        Vector3 normalDirection = (destinationPoint - startingPoint).NormalizedXZ();
-        
+        Vector3 normalDirection = (destinationPoint - transform.position).NormalizedXZ();
+
         motion = normalDirection * WalkSpeed;
 
         // rotate
         Quaternion rotation = Quaternion.LookRotation(normalDirection);
         Trans.rotation = rotation;
 
-        //controller.Move(motion);
-
         float sqrDist = (destinationPoint - transform.position).sqrMagnitude;
-        MyDebug.LogError($"Check Finish : {sqrDist}");
-        if (sqrDist < 2.4f) // 도착 검증할 임시 값
+        if (sqrDist < distOffset)
         {
-            MyDebug.LogError("Roaming FINISH");
             ChangeState(EActorState.Idle);
         }
         else
         {
-            MyDebug.LogError("Roaming ...");
+            MyDebug.Log($"{gameObject.name} Roaming ...");
         }
     }
 
     void MoveTarget()
     {
-        MyDebug.LogError($"Move to Target : {target.name}");
-
-        Vector3 normalDirection = (target.transform.position - transform.position).NormalizedXZ();
+        Vector3 normalDirection;
+        
+        if (IsOutOfChasingArea())
+        {
+            // todo : 원래 위치로
+            MyDebug.LogError($"COMEBACK : {gameObject.name}");
+            
+            target = null;
+            normalDirection = (startingPoint - transform.position).NormalizedXZ();
+        }
+        else
+        {
+            MyDebug.LogError($"Move to Target : {target.name}");
+            
+            normalDirection = (target.transform.position - transform.position).NormalizedXZ();
+        }        
 
         motion = normalDirection * WalkSpeed;
         Quaternion rotation = Quaternion.LookRotation(normalDirection);
@@ -213,27 +236,26 @@ public class Monster : Actor
         ChangeState(EActorState.Run);
     }
 
+    bool IsOutOfChasingArea()
+    {
+        float sqrDist = (startingPoint - transform.position).sqrMagnitude;
+
+        return sqrDist > ChasingRadius;
+    }
+
     public bool CheckInAttackRange()
     {
-        if (target == null)
-        {
-            return false;
-        }
-
         float sqrDist = (target.transform.position - transform.position).sqrMagnitude;
         return sqrDist <= AttackRange;
     }
 
     public override void Attack()
     {
-        if (CheckInAttackRange() == false)
-        {
-            return;
-        }
-
         // todo : 공격 처리와 애니메이션
         MyDebug.LogError("Attack!");
         ChangeState(EActorState.Attack);
+        
+        target.TakeDamage(this, attackPower);
     }
 
     public override void TakeDamage(Actor enemy, int power)
@@ -317,9 +339,17 @@ public class Monster : Actor
     }
 
     #if UNITY_EDITOR
-    void OnDrawGizmosSelected()
+    
+    // void OnDrawGizmosSelected()
+    void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
+        Gizmos.DrawCube(startingPoint, Vector3.one * 0.1f);
+        
+        Gizmos.color = Color.blue;
+        Gizmos.DrawCube(destinationPoint, Vector3.one * 0.1f);
+        
+        Gizmos.color = Color.yellow;
         Gizmos.DrawLine(startingPoint, destinationPoint);
     }
     

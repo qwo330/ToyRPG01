@@ -44,7 +44,7 @@ public static class MyUtil
     {
         vector.y = 0;
 
-        return vector;
+        return vector.normalized;
     }
 }
 
