@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -16,7 +14,7 @@ public class GameManager : SingletonMono<GameManager>
         set => heightMapData = value;
     }
 
-    List<Spawner> spawnerList = new List<Spawner>();
+    List<Spawner> spawnerList = new();
     
     public bool HasMapData(int x, int z) => heightMapData.ContainsKey((x, z));
     
@@ -61,14 +59,30 @@ public class GameManager : SingletonMono<GameManager>
         GetPlayerInput();
     }
 
+    public void InitManagers()
+    {
+        ActorManager.Instance.Init();
+    }
+
+    public void ResetManagers()
+    {
+        ActorManager.Instance.Reset();
+    }
+
     public void GameStart()
     {
         MyDebug.Log("Game Start");
         currentState = EGameState.Play;
 
-        foreach (Spawner VARIABLE in spawnerList)
+        if (Camera.main.TryGetComponent(out CameraController camController))
         {
-            VARIABLE.CreateSpawner();
+            var player = ActorManager.Instance.GetLocalPlayer();
+            camController.SetTarget(player);
+        }
+        
+        foreach (var s in spawnerList)
+        {
+            s.CreateSpawner();
         }
     }
     

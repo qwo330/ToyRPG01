@@ -139,7 +139,8 @@ public class Monster : Actor
         ChangeState(EActorState.Idle);
     }
 
-    public override void Move()
+    // public override void Move()
+    public void Move()
     {
         motion = Vector3.zero;
         
@@ -249,7 +250,8 @@ public class Monster : Actor
         return sqrDist <= AttackRange;
     }
 
-    public override void Attack()
+    // public override void Attack()
+    public void Attack()
     {
         // todo : 공격 처리와 애니메이션
         MyDebug.LogError("Attack!");

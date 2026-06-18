@@ -5,6 +5,20 @@ using System;
 
 public static class MyUtil
 {
+    public static bool IsNullOrDestroyed(this object obj)
+    {
+        if (obj is null)
+            return true;
+        
+        if (obj.GetType().IsValueType)
+            return false;
+
+        if (obj is UnityEngine.Object unityObj)
+            return unityObj == null;
+        
+        return false;
+    }
+    
     public static T FindbyCondition<T>(this List<T> list, Func<T, bool> conditional)
     {
         int listCount = list.Count;
@@ -19,17 +33,15 @@ public static class MyUtil
         return default;
     }
 
-    static System.Random rand = new System.Random();
+    static readonly System.Random rand = new System.Random();
     public static void Shuffle(List<int> list)
     {
-        int cnt = list.Count;
+        var cnt = list.Count;
         while (cnt > 1)
         {
             cnt--;
-            int k = rand.Next(cnt + 1);
-            int value = list[k];
-            list[k] = list[cnt];
-            list[cnt] = value;
+            var k = rand.Next(cnt + 1);
+            (list[k], list[cnt]) = (list[cnt], list[k]);
         }
     }
 
@@ -45,6 +57,48 @@ public static class MyUtil
         vector.y = 0;
 
         return vector.normalized;
+    }
+    
+    public static bool FloatEqual(float curr, float target)
+    {
+        return (Math.Abs(curr - target) < 0.0001f);
+    }
+
+    public static int Modulus(int x, int y)
+    {
+        return x - (x / y) * y;
+    }
+
+    static readonly string[] numberUnits = { "", "K", "M", "B", "T" };
+    public static string ToNumberString(this long value, int decimals = 2)
+    {
+        if (value == 0) return "0";
+        if (value < 0) return "-" + Math.Abs(value).ToNumberString(decimals);
+        if (value < 1000) return value.ToString();
+
+        var index = 0;
+        float num = value; // 값 훼손을 막기 위해 계산용 실수로 변환하여 진행
+
+        while (num >= 1000f && index < numberUnits.Length - 1)
+        {
+            num /= 1000f;
+            index++;
+        }
+
+        var format = "F" + decimals;
+        var result = num.ToString(format);
+
+        if (decimals > 0 && result.Contains("."))
+        {
+            result = result.TrimEnd('0').TrimEnd('.');
+        }
+
+        return $"{result}{numberUnits[index]}";
+    }
+
+    public static string ToNumberString(this int value, int decimals = 2)
+    {
+        return ((long)value).ToNumberString(decimals);
     }
 }
 

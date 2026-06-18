@@ -16,9 +16,9 @@ public class Spawner : MonoBehaviour
 
     CancellationTokenSource disableCancellation;
     
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     int nameIndex = 0;
-    #endif
+#endif
 
     void OnEnable()
     {
@@ -113,8 +113,9 @@ public class Spawner : MonoBehaviour
             monster.SpawnMonster(transform.position);
             spawnedMonsterCount++;
             
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             monster.name = $"{monster.name} {++nameIndex}";
+            MyDebug.Log($"StartSpawn, spawner : {gameObject.name}, pos : {transform.position}");
 #endif
         }
     }

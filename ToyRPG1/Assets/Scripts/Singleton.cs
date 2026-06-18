@@ -1,31 +1,36 @@
 using UnityEngine;
 
-public class Singleton<T> where T : new()
+public class Singleton<T> where T : class, new()
 {
-    static T _instance;
-    static object _lock = new object();
+    static T instance;
+    static readonly object @lock = new object();
     static bool applicationIsQuitting = false;
-
+    
     public static T Instance
     {
         get
         {
             if (applicationIsQuitting)
             {
-                Debug.LogWarning("[Singleton] Instance '" + typeof(T) +
+                MyDebug.LogWarning("[Singleton] Instance '" + typeof(T) +
                     "' already destroyed on application quit." +
                     " Won't create again - returning null.");
-                return default(T);
+                return null;
             }
 
-            lock (_lock)
+            lock (@lock)
             {
-                if (_instance == null)
+                if (instance == null)
                 {
-                    _instance = new T();
+                    instance = new T();
+                    
+                    if (instance is Singleton<T> s)
+                    {
+                        s.Init();
+                    }
                 }
 
-                return _instance;
+                return instance;
             }
         }
     }
@@ -34,12 +39,22 @@ public class Singleton<T> where T : new()
     {
         applicationIsQuitting = true;
     }
+
+    public virtual void Init()
+    {
+        
+    }
+
+    public virtual void Reset()
+    {
+        
+    }
 }
 
 public class SingletonMono<T> : MonoBehaviour where T : MonoBehaviour
 {
-    static T _instance;
-    static object _lock = new object();
+    static T instance;
+    static readonly object @lock = new ();
     static bool applicationIsQuitting = false;
 
     void Awake()
@@ -53,46 +68,41 @@ public class SingletonMono<T> : MonoBehaviour where T : MonoBehaviour
         {
             if (applicationIsQuitting)
             {
-                Debug.LogWarning("[Singleton] Instance '" + typeof(T) +
+                MyDebug.LogWarning("[Singleton] Instance '" + typeof(T) +
                     "' already destroyed on application quit." +
                     " Won't create again - returning null.");
                 return null;
             }
 
-            lock (_lock)
+            lock (@lock)
             {
-                if (_instance == null)
+                if (instance == null)
                 {
-                    _instance = (T)FindObjectOfType(typeof(T));
+                    instance = FindFirstObjectByType<T>();
 
-                    if (FindObjectsOfType(typeof(T)).Length > 1)
+                    if (FindObjectsByType<T>(FindObjectsSortMode.None).Length > 1)
                     {
-                        Debug.LogError("[Singleton] Something went really wrong " +
+                        MyDebug.LogError("[Singleton] Something went really wrong " +
                             " - there should never be more than 1 singleton!" +
                             " Reopening the scene might fix it.");
-                        return _instance;
+                        return instance;
                     }
 
-                    if (_instance == null)
+                    if (instance == null)
                     {
-                        GameObject singleton = new GameObject();
-                        _instance = singleton.AddComponent<T>();
-                        singleton.name = "(singleton) " + typeof(T).ToString();
+                        GameObject singleton = new GameObject($"(singleton) {typeof(T)}");
+                        instance = singleton.AddComponent<T>();
 
                         DontDestroyOnLoad(singleton);
-
-                        Debug.Log("[Singleton] An instance of " + typeof(T) +
-                            " is needed in the scene, so '" + singleton +
-                            "' was created with DontDestroyOnLoad.");
                     }
-                    else
+
+                    if (instance is SingletonMono<T> s)
                     {
-                        Debug.Log("[Singleton] Using instance already created: " +
-                            _instance.gameObject.name);
+                        s.Init();
                     }
                 }
 
-                return _instance;
+                return instance;
             }
         }
     }
@@ -100,5 +110,15 @@ public class SingletonMono<T> : MonoBehaviour where T : MonoBehaviour
     protected virtual void OnApplicationQuit()
     {
         applicationIsQuitting = true;
+    }
+    
+    public virtual void Init()
+    {
+        
+    }
+    
+    public virtual void Reset()
+    {
+        
     }
 }

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public enum EPlayerState
 {
@@ -20,12 +18,12 @@ public enum EPlayerState
 /// </summary>
 public class PlayerControl : Actor
 {
+    readonly static string NORMAL_ATTACK_PATH = "FX/ArcaneProjectileSmall.prefab";
+    
     [SerializeField] Transform attackPoint;
 
     [SerializeField] ActorScanner scanner;
     // [SerializeField] Projectile ProjectilePrefab;
-    
-    readonly static string NORMAL_ATTACK_PATH = "FX/ArcaneProjectileSmall.prefab";
     
     MyObjectPool<Projectile> normalAttackPool;
 
@@ -102,7 +100,8 @@ public class PlayerControl : Actor
         ChangeAnimation(currentState, currentStateValue);
     }
 
-    public override void Move()
+    // public override void Move()
+    public void Move()
     {
         if (isJumping && controller.isGrounded)
         {
@@ -176,7 +175,8 @@ public class PlayerControl : Actor
         motion.y -= Gravity * Time.deltaTime;
     }
 
-    public override void Attack()
+    // public override void Attack()
+    public void Attack()
     {
         if (currentState == EPlayerState.Jump)
         {
