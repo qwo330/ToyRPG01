@@ -13,7 +13,7 @@ public abstract class Actor : MonoBehaviour
 
     ActorAnimator actorAnimator;
     
-    void Awake()
+    void Start()
     {
         Init();
     }

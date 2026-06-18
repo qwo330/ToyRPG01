@@ -22,7 +22,7 @@ public class PlayerInput : MonoBehaviour
     bool isAttacking;
     bool isJumping;
     
-    void Awake()
+    void Start()
     {
         if (!gameObject.TryGetComponent<Player>(out var p))
         {
