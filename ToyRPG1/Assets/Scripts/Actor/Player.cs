@@ -7,6 +7,8 @@ public class Player : Actor
     [SerializeField] PlayerData data;
     [SerializeField] MoveController moveController;
 
+    public PlayerData Data => data;
+
     protected override void Init()
     {
         if (moveController == null)

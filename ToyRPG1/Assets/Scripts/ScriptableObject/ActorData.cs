@@ -1,5 +1,5 @@
+using System;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class ActorData : ScriptableObject
 {
@@ -14,6 +14,8 @@ public class ActorData : ScriptableObject
     
     public float AttackCooltime;
     public float AttackRange;
+
+    public AttackTiming[] AttackTimings;
 }
 
 [CreateAssetMenu(fileName = "New Player Data", menuName = "ScriptableObject Object/Player Data")]
@@ -26,4 +28,24 @@ public class PlayerData : ActorData
 public class EnemyData : ActorData
 {
     
+}
+
+[Serializable]
+public struct AttackTiming
+{
+    public float InputStart;
+    public float InputEnd;
+    public float AttackEnd;
+
+    public AttackTiming(float inputStart, float inputEnd, float attackEnd)
+    {
+        InputStart = inputStart;
+        InputEnd = inputEnd;
+        AttackEnd = attackEnd;
+    }
+
+    public bool CanBufferInput(float elapsedTime)
+    {
+        return elapsedTime >= InputStart && elapsedTime <= InputEnd;
+    }
 }

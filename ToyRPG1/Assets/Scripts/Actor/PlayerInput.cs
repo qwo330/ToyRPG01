@@ -12,25 +12,90 @@ public class PlayerInput : MonoBehaviour
         public Quaternion LookRotation;
     }
     
-    Player player;
-    Camera Cam => Camera.main;
+    struct ComboAttackState
+    {
+        AttackTiming[] timings;
+        float elapsedTime;
+        bool bufferedNextCombo;
 
-    [SerializeField] float comboInputSec = 0.8f;
-    
-    int combo = 0;
-    float lastAttackTime;
-    bool isAttacking;
-    bool isJumping;
+        public int Combo { get; private set; }
+        public bool IsAttacking => Combo > 0;
+        
+        int MaxCombo => timings.Length;
+        bool HasNextCombo => Combo < MaxCombo;
+
+        public void Init(AttackTiming[] attackTimings)
+        {
+            timings = attackTimings;
+            Reset();
+        }
+
+        public void Tick(bool attackPressed, float deltaTime)
+        {
+            if (!IsAttacking)
+            {
+                if (attackPressed)
+                    Begin(1);
+
+                return;
+            }
+
+            elapsedTime += deltaTime;
+
+            var timing = GetTiming(Combo);
+
+            if (attackPressed && HasNextCombo && timing.CanBufferInput(elapsedTime))
+                bufferedNextCombo = true;
+
+            if (elapsedTime < timing.AttackEnd)
+                return;
+
+            if (bufferedNextCombo && HasNextCombo)
+                Begin(Combo + 1);
+            else
+                Reset();
+        }
+
+        AttackTiming GetTiming(int combo)
+        {
+            var index = Mathf.Clamp(combo - 1, 0, timings.Length - 1);
+            return timings[index];
+        }
+
+        void Begin(int combo)
+        {
+            Combo = combo;
+            elapsedTime = 0f;
+            bufferedNextCombo = false;
+        }
+
+        void Reset()
+        {
+            Combo = 0;
+            elapsedTime = 0f;
+            bufferedNextCombo = false;
+        }
+    }
+
+    ComboAttackState attackState;
+    Player player;
+
+    Camera Cam => Camera.main;
+    bool IsAttacking => attackState.IsAttacking;
     
     void Start()
     {
-        if (!gameObject.TryGetComponent<Player>(out var p))
+        if (gameObject.TryGetComponent<Player>(out var p))
+        {
+            player = p;
+            ActorManager.Instance.LocalPlayerID = p.EntityID;
+            attackState.Init(player.Data.AttackTimings);
+        }
+        else
         {
             MyDebug.LogError("Cannot find player in scene!");
+            attackState.Init(null);
         }
-
-        player = p;
-        ActorManager.Instance.LocalPlayerID = p.EntityID;
     }
 
     void Update()
@@ -69,7 +134,7 @@ public class PlayerInput : MonoBehaviour
             Position = finalCommand.MoveDirection,
             Rotation = finalCommand.LookRotation,
             State = finalCommand.State,
-            Combo = combo
+            Combo = attackState.Combo
         };
         
         ActorManager.Instance.AddSnapshot(s);
@@ -114,30 +179,11 @@ public class PlayerInput : MonoBehaviour
     
     Command EvaluateAttackCommand(int priority)
     {
-        if (isAttacking && IsComboCanceled())
-        {
-            ResetAttackState();
-        }
-
-        if (Input.GetMouseButtonDown(0))
-        {
-            if (IsComboCanceled())
-            {
-                combo = 0;
-            }
-
-            combo++;
-
-            if (combo <= 3)
-            {
-                isAttacking = true;
-                lastAttackTime = Time.time;
-            }
-        }
+        attackState.Tick(IsAttackPressed(), Time.deltaTime);
         
         return new Command
         {
-            IsActive = isAttacking,
+            IsActive = attackState.IsAttacking,
             Priority = priority,
             State = ActorState.Attack,
             MoveDirection = Vector3.zero,
@@ -145,23 +191,14 @@ public class PlayerInput : MonoBehaviour
         };
     }
 
-    bool IsComboCanceled()
+    bool IsAttackPressed()
     {
-        return Time.time - lastAttackTime > comboInputSec;
-    }
-
-    public void ResetAttackState()
-    {
-        isAttacking = false;
-        combo = 0;
+        return Input.GetMouseButtonDown(0);
     }
     
     Command EvaluateJumpCommand(int priority)
     {
-        if (!isAttacking && Input.GetKeyDown(KeyCode.Space))
-        {
-            isJumping = true;
-        }
+        var isJumping = !IsAttacking && Input.GetKeyDown(KeyCode.Space);
 
         return new Command
         {
