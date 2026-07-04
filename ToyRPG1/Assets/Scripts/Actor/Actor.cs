@@ -1,6 +1,30 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+struct Command
+{
+    public bool IsActive;
+    public int Priority;
+    public ActorState State;
+    
+    public Vector3 MoveDirection;
+    public Quaternion LookRotation;
+    
+    public int TargetID;
+    public int SkillID;
+
+    public static Command Idle(Actor actor)
+    {
+        if (actor == null)
+            return new Command();
+        
+        return new Command
+        {
+            LookRotation = actor.transform.rotation
+        };
+    }
+}
+
 [RequireComponent(typeof(ActorAnimator))]
 public abstract class Actor : MonoBehaviour
 {

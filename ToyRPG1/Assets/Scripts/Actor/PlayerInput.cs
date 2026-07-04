@@ -122,7 +122,7 @@ public class PlayerInput : MonoBehaviour
         var finalCommand = new Command
         {
             State = ActorState.Idle,
-            MoveDirection = Vector3.zero,
+            MoveDirection = transform.position,
             LookRotation = transform.rotation
         };
 

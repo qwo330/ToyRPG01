@@ -139,3 +139,11 @@ public static class WaitTimeCache
         action?.Invoke();
     }
 }
+
+public static class VectorExtensions
+{
+    public static void SetY(this ref Vector3 vector, float y)
+    {
+        vector.y = y;
+    }
+}
