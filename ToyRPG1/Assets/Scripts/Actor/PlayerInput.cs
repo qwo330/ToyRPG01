@@ -14,14 +14,22 @@ public class PlayerInput : MonoBehaviour
     
     struct ComboAttackState
     {
+        static readonly AttackTiming[] DefaultTimings =
+        {
+            new(0.25f, 0.42f, 0.5f, 0.7f),
+            new(0.25f, 0.42f, 0.55f, 0.75f),
+            new(0f, 0f, 0.65f, 0.85f)
+        };
+
         AttackTiming[] timings;
         float elapsedTime;
-        bool bufferedNextCombo;
+        float recoveryTime;
 
         public int Combo { get; private set; }
         public bool IsAttacking => Combo > 0;
         
-        int MaxCombo => timings.Length;
+        AttackTiming[] Timings => timings != null && timings.Length > 0 ? timings : DefaultTimings;
+        int MaxCombo => Timings.Length;
         bool HasNextCombo => Combo < MaxCombo;
 
         public void Init(AttackTiming[] attackTimings)
@@ -32,6 +40,10 @@ public class PlayerInput : MonoBehaviour
 
         public void Tick(bool attackPressed, float deltaTime)
         {
+            recoveryTime -= deltaTime;
+            if (recoveryTime > 0f)
+                return;
+
             if (!IsAttacking)
             {
                 if (attackPressed)
@@ -45,35 +57,35 @@ public class PlayerInput : MonoBehaviour
             var timing = GetTiming(Combo);
 
             if (attackPressed && HasNextCombo && timing.CanBufferInput(elapsedTime))
-                bufferedNextCombo = true;
+            {
+                Begin(Combo + 1);
+                return;
+            }
 
             if (elapsedTime < timing.AttackEnd)
                 return;
 
-            if (bufferedNextCombo && HasNextCombo)
-                Begin(Combo + 1);
-            else
-                Reset();
+            Reset(timing.RecoveryDuration);
         }
 
         AttackTiming GetTiming(int combo)
         {
-            var index = Mathf.Clamp(combo - 1, 0, timings.Length - 1);
-            return timings[index];
+            var index = Mathf.Clamp(combo - 1, 0, Timings.Length - 1);
+            return Timings[index];
         }
 
         void Begin(int combo)
         {
             Combo = combo;
             elapsedTime = 0f;
-            bufferedNextCombo = false;
+            recoveryTime = 0f;
         }
 
-        void Reset()
+        void Reset(float recoveryDuration = 0f)
         {
             Combo = 0;
             elapsedTime = 0f;
-            bufferedNextCombo = false;
+            recoveryTime = recoveryDuration;
         }
     }
 
@@ -89,7 +101,7 @@ public class PlayerInput : MonoBehaviour
         {
             player = p;
             ActorManager.Instance.LocalPlayerID = p.EntityID;
-            attackState.Init(player.Data.AttackTimings);
+            attackState.Init(player.Data != null ? player.Data.AttackTimings : null);
         }
         else
         {

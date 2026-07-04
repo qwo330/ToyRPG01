@@ -24,9 +24,12 @@ MonoBehaviour:
   - InputStart: 0.25
     InputEnd: 0.42
     AttackEnd: 0.5
+    RecoveryEnd: 0.7
   - InputStart: 0.25
     InputEnd: 0.42
     AttackEnd: 0.55
+    RecoveryEnd: 0.75
   - InputStart: 0
     InputEnd: 0
     AttackEnd: 0.65
+    RecoveryEnd: 0.85
