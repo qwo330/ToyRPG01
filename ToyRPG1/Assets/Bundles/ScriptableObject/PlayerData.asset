@@ -20,3 +20,13 @@ MonoBehaviour:
   Gravity: 10
   AttackCooltime: 2
   AttackRange: 3
+  AttackTimings:
+  - InputStart: 0.25
+    InputEnd: 0.42
+    AttackEnd: 0.5
+  - InputStart: 0.25
+    InputEnd: 0.42
+    AttackEnd: 0.55
+  - InputStart: 0
+    InputEnd: 0
+    AttackEnd: 0.65
