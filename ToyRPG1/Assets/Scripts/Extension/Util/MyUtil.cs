@@ -147,3 +147,11 @@ public static class VectorExtensions
         vector.y = y;
     }
 }
+
+public static class QuaternionExtensions
+{
+    public static Quaternion SafeLookRotation(Vector3 dir, Quaternion fallback)
+    {
+        return dir.sqrMagnitude < 0.001f ? fallback : Quaternion.LookRotation(dir);
+    }
+}

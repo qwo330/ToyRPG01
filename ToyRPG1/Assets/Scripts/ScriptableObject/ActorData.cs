@@ -27,7 +27,12 @@ public class PlayerData : ActorData
 [CreateAssetMenu(fileName = "New Enemy Data", menuName = "ScriptableObject Object/Enemy Data")]
 public class EnemyData : ActorData
 {
+    public float RoamRadius = 5f;
+    public float DetectRadius = 10f;
+    public float LeashRange = 15f;
     
+    public float StateChangeTime;
+    public float NextRoamingTime;
 }
 
 [Serializable]
@@ -39,7 +44,7 @@ public struct AttackTiming
     public float RecoveryEnd;
 
     public float RecoveryDuration => Mathf.Max(0f, RecoveryEnd - AttackEnd);
-    
+
     public AttackTiming(float inputStart, float inputEnd, float attackEnd, float recoveryEnd)
     {
         InputStart = inputStart;
