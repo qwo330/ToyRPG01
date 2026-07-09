@@ -3,17 +3,18 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public abstract class MoveController : MonoBehaviour, IMove
 {
-    CharacterController controller;
-    float gVelocity;
-    Vector3 currentVelocity;
-    
-    protected ActorData Data { get; private set; }
     public ActorSnapshot Snapshot { get; private set; }
     
     public float WalkSpeed => Data.WalkSpeed;
     public float RotSpeed => Data.RotSpeed;
     public float Acceleration => Data.Acceleration;
     
+    protected ActorData Data { get; private set; }
+
+    CharacterController controller;
+    float gVelocity;
+    Vector3 currentVelocity;
+
     void Awake()
     {
         controller = GetComponent<CharacterController>();
@@ -88,8 +89,6 @@ public abstract class MoveController : MonoBehaviour, IMove
         }
     }
 
-    bool IsGrounded() => controller.isGrounded && gVelocity < 0;
-
     protected void Rotate(Quaternion targetRot)
     {
         var dot = Quaternion.Dot(transform.rotation, targetRot);
@@ -98,6 +97,8 @@ public abstract class MoveController : MonoBehaviour, IMove
         
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, RotSpeed * Time.deltaTime);
     }
+
+    bool IsGrounded() => controller.isGrounded && gVelocity < 0;
 }
 
 public class RemoteMoveController : MoveController

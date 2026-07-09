@@ -1,30 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-struct Command
-{
-    public bool IsActive;
-    public int Priority;
-    public ActorState State;
-    
-    public Vector3 MoveDirection;
-    public Quaternion LookRotation;
-    
-    public int TargetID;
-    public int SkillID;
-
-    public static Command Idle(Actor actor)
-    {
-        if (actor == null)
-            return new Command();
-        
-        return new Command
-        {
-            LookRotation = actor.transform.rotation
-        };
-    }
-}
-
 [RequireComponent(typeof(ActorAnimator))]
 public abstract class Actor : MonoBehaviour
 {
@@ -33,7 +9,8 @@ public abstract class Actor : MonoBehaviour
     public int HP;
     
     public ActorSnapshot Snapshot { get; private set; }
-    readonly List<IAction> actions = new ();
+
+    readonly List<IAction> actions = new();
 
     ActorAnimator actorAnimator;
     
@@ -87,6 +64,30 @@ public abstract class Actor : MonoBehaviour
     }
 }
 
+struct Command
+{
+    public bool IsActive;
+    public int Priority;
+    public ActorState State;
+
+    public Vector3 MoveDirection;
+    public Quaternion LookRotation;
+
+    public int TargetID;
+    public int SkillID;
+
+    public static Command Idle(Actor actor)
+    {
+        if (actor == null)
+            return new Command();
+
+        return new Command
+        {
+            LookRotation = actor.transform.rotation
+        };
+    }
+}
+
 public enum EActorState
 {
     None = 0,
@@ -96,7 +97,7 @@ public enum EActorState
     Attack,
     Hit,
     Dead,
-    
+
     // player 외의 행동
     StandBy = 100, // 대기 모션
     Roam,
