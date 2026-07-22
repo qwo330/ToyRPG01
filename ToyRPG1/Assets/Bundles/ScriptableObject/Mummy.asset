@@ -9,8 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9d0d38bb7c564214aaa9972f4e0583ab, type: 3}
-  m_Name: PlayerData
+  m_Script: {fileID: 11500000, guid: 0c10eb89bca043859cfdc7a994859405, type: 3}
+  m_Name: Mummy
   m_EditorClassIdentifier: 
   MaxHP: 100
   WalkSpeed: 5
@@ -19,17 +19,12 @@ MonoBehaviour:
   JumpPower: 8
   Gravity: 10
   AttackCooltime: 2
-  AttackRange: 3
-  AttackTimings:
-  - InputStart: 0.25
-    InputEnd: 0.42
-    AttackEnd: 0.5
-    RecoveryEnd: 0.7
-  - InputStart: 0.25
-    InputEnd: 0.42
-    AttackEnd: 0.55
-    RecoveryEnd: 0.75
-  - InputStart: 0
-    InputEnd: 0
-    AttackEnd: 0.65
-    RecoveryEnd: 0.85
+  AttackRange: 1
+  AttackTimings: []
+  RoamRadius: 5
+  DetectRadius: 10
+  LeashRange: 15
+  TargetLayers:
+    serializedVersion: 2
+    m_Bits: 8
+  NextRoamingTime: 1

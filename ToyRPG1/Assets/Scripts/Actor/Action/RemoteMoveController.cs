@@ -3,11 +3,15 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public abstract class MoveController : MonoBehaviour, IMove
 {
+    const float DefaultWalkSpeed = 6f;
+    const float DefaultRotSpeed = 5f;
+    const float DefaultAcceleration = 30f;
+
     public ActorSnapshot Snapshot { get; private set; }
     
-    public float WalkSpeed => Data.WalkSpeed;
-    public float RotSpeed => Data.RotSpeed;
-    public float Acceleration => Data.Acceleration;
+    public float WalkSpeed => Data != null ? Data.WalkSpeed : DefaultWalkSpeed;
+    public float RotSpeed => Data != null ? Data.RotSpeed : DefaultRotSpeed;
+    public float Acceleration => Data != null ? Data.Acceleration : DefaultAcceleration;
     
     protected ActorData Data { get; private set; }
 
@@ -25,15 +29,24 @@ public abstract class MoveController : MonoBehaviour, IMove
         Data = data;
     }
 
-    public void Apply(ActorSnapshot snapshot)
+    public virtual void Apply(ActorSnapshot snapshot)
     {
         Snapshot = snapshot;
+
+        if (snapshot.State != ActorState.Move)
+            ResetMotion();
     }
 
     public abstract void Process();
 
-    protected void MoveTo(Vector3 targetPos, bool isRemote)
+    protected void MoveTo(Vector3 targetPos, bool isRemote, bool allowRelocation = true)
     {
+        if (controller == null)
+            controller = GetComponent<CharacterController>();
+
+        if (controller == null)
+            return;
+
         var currentPos = transform.position;
         var dx = targetPos.x - currentPos.x;
         var dz = targetPos.z - currentPos.z;
@@ -42,11 +55,9 @@ public abstract class MoveController : MonoBehaviour, IMove
         var horizontalSqr = dx * dx + dz * dz;
         var verticalAbs = Mathf.Abs(dy);
 
-        if (isRemote && LFIsRelocate())
+        if (allowRelocation && isRemote && LFIsRelocate())
         {
-            transform.position = targetPos;
-            gVelocity = 0f;
-            currentVelocity = Vector3.zero;
+            SyncTransform(targetPos, transform.rotation);
             return;
         }
         
@@ -89,6 +100,36 @@ public abstract class MoveController : MonoBehaviour, IMove
         }
     }
 
+    protected void SyncTransform(Vector3 position, Quaternion rotation)
+    {
+        if (controller == null)
+            controller = GetComponent<CharacterController>();
+
+        if (controller == null)
+        {
+            transform.SetPositionAndRotation(position, rotation);
+            ResetMotion();
+            return;
+        }
+
+        var wasEnabled = controller.enabled;
+        if (wasEnabled)
+            controller.enabled = false;
+
+        transform.SetPositionAndRotation(position, rotation);
+
+        if (wasEnabled)
+            controller.enabled = true;
+
+        ResetMotion();
+    }
+
+    protected void ResetMotion()
+    {
+        gVelocity = 0f;
+        currentVelocity = Vector3.zero;
+    }
+
     protected void Rotate(Quaternion targetRot)
     {
         var dot = Quaternion.Dot(transform.rotation, targetRot);
@@ -103,11 +144,27 @@ public abstract class MoveController : MonoBehaviour, IMove
 
 public class RemoteMoveController : MoveController
 {
+    [SerializeField] bool allowRelocation = true;
+
+    public bool AllowRelocation
+    {
+        get => allowRelocation;
+        set => allowRelocation = value;
+    }
+
+    public override void Apply(ActorSnapshot snapshot)
+    {
+        base.Apply(snapshot);
+
+        if (snapshot.State != ActorState.Move)
+            SyncTransform(snapshot.Position, snapshot.Rotation);
+    }
+
     public override void Process()
     {
-        var worldPos = Snapshot.Position;
+        var worldPos = Snapshot.State == ActorState.Move ? Snapshot.Position : transform.position;
         
-        MoveTo(worldPos, isRemote: true);
+        MoveTo(worldPos, isRemote: true, allowRelocation: allowRelocation);
         Rotate(Snapshot.Rotation);
     }
 }

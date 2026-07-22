@@ -1,66 +1,77 @@
-using System;
-
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class ActorScanner : MonoBehaviour
 {
     [SerializeField] float scanRadius;
-    [SerializeField] LayerMask targetLayer;
-    [SerializeField] RaycastHit[] targets;
-
+    [FormerlySerializedAs("targetLayer")]
+    [SerializeField] LayerMask targetLayers;
     [SerializeField] int scanMaxCount = 10;
 
-    public void FindTargets()
-    {
-        // 배열 초기화 주의, 성능 최적화를 위해 nonAlloc 사용 (array)
-        RaycastHit[] result = new RaycastHit[scanMaxCount];
-        Physics.SphereCastNonAlloc(transform.position, scanRadius, transform.forward, result, scanRadius, layerMask:targetLayer);
-        
-        if (result[1].transform != null)
-        {
-            // 최소 2개는 있어야 정렬
-            Array.Sort(result, NearCompare);
-        }
+    [ReadOnly, SerializeField] Collider[] targets;
+    [ReadOnly, SerializeField] int targetCount;
 
-        targets = result;
+    public void Configure(float radius, LayerMask layers)
+    {
+        scanRadius = radius;
+        targetLayers = layers;
+
+        EnsureTargetBuffer();
     }
 
     public Actor GetTarget()
     {
         FindTargets();
-        
-        if (targets.Length > 0 && targets[0].transform != null)
+
+        Actor closest = null;
+        var closestSqrDistance = float.PositiveInfinity;
+        var origin = transform.position;
+
+        for (var i = 0; i < targetCount; i++)
         {
-            return targets[0].transform.GetComponent<Actor>();
+            var targetCollider = targets[i];
+            if (targetCollider == null)
+                continue;
+
+            var actor = targetCollider.GetComponentInParent<Actor>();
+            if (actor == null || actor.gameObject == gameObject)
+                continue;
+
+            var sqrDistance = (actor.transform.position - origin).sqrMagnitude;
+            if (sqrDistance >= closestSqrDistance)
+                continue;
+
+            closest = actor;
+            closestSqrDistance = sqrDistance;
         }
 
-        return null;
+        return closest;
     }
 
-    int NearCompare(RaycastHit x, RaycastHit y)
+    public void FindTargets()
     {
-        if (x.transform == null && y.transform == null)
-        {
-            return 0;
-        }
-        else if (x.transform != null && y.transform == null)
-        {
-            return -1;
-        }
-        else if (x.transform == null && y.transform != null)
-        {
-            return 1;
-        }
-        else
-        {
-            Vector3 position = transform.position;
-            float xDist = (x.transform.position - position).sqrMagnitude;
-            float yDist = (y.transform.position - position).sqrMagnitude;
+        EnsureTargetBuffer();
 
-            return xDist.CompareTo(yDist);
+        if (scanRadius <= 0f || targetLayers.value == 0)
+        {
+            targetCount = 0;
+            return;
         }
+
+        targetCount = Physics.OverlapSphereNonAlloc(
+            transform.position,
+            scanRadius,
+            targets,
+            targetLayers,
+            QueryTriggerInteraction.Ignore);
     }
-    
+
+    void EnsureTargetBuffer()
+    {
+        var capacity = Mathf.Max(1, scanMaxCount);
+        if (targets == null || targets.Length != capacity)
+            targets = new Collider[capacity];
+    }
 
 #if UNITY_EDITOR
     void OnDrawGizmos()
@@ -68,6 +79,5 @@ public class ActorScanner : MonoBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, scanRadius);
     }
-
 #endif
 }

@@ -7,70 +7,369 @@ public enum MonsterAIState
     Roaming,
     Chase,
     Attack,
+    Returning,
 }
 
 public class MonsterBrain : MonoBehaviour
 {
-    public float RoamRadius => Data.RoamRadius;
-    public float DetectRadius => Data.DetectRadius;
-    public float LeashRange => Data.LeashRange;
-    public float AttackRange => Data.AttackRange;
+    const float DefaultRoamRadius = 5f;
+    const float DefaultDetectRadius = 10f;
+    const float DefaultLeashRange = 15f;
+    const float DefaultAttackRange = 1f;
+    const float DefaultRoamDelay = 0.5f;
+    const float DefaultAttackCooldown = 1f;
+    const float ArriveThresholdSqr = 0.04f; // 0.2f * 0.2f
+    const int DefaultTargetLayerMask = GameLayers.PlayerMask;
+
+    public float RoamRadius => Data != null ? Data.RoamRadius : DefaultRoamRadius;
+    public float DetectRadius => Data != null ? Data.DetectRadius : DefaultDetectRadius;
+    public float LeashRange => Data != null ? Data.LeashRange : DefaultLeashRange;
+    public float AttackRange => Data != null ? Data.AttackRange : DefaultAttackRange;
+    public LayerMask TargetLayers => Data != null && Data.TargetLayers.value != 0 ? Data.TargetLayers : DefaultTargetLayerMask;
+
+    protected EnemyData Data { get; private set; }
+
+    float RoamDelay => Data != null && Data.NextRoamingTime > 0f ? Data.NextRoamingTime : DefaultRoamDelay;
+    float AttackCooldown => Data != null && Data.AttackCooltime > 0f ? Data.AttackCooltime : DefaultAttackCooldown;
+    bool HasMoveTarget => hasMoveTarget;
+    bool IsArrived => HasMoveTarget && GetHorizontalSqrDistance(transform.position, targetPosition) <= ArriveThresholdSqr;
 
     MonsterAIState aiState;
     Command lastCommand;
 
-    Vector3 basePoint;
-    Vector3 roamTarget;
+    Vector3 homePoint;
+    Vector3 targetPosition;
+    Vector3 lastChaseTargetPosition;
+    bool hasMoveTarget;
+    bool isReady;
 
     Actor target;
     Enemy enemy;
     ActorScanner scanner;
 
     float nextRoamTime;
+    float nextAttackTime;
 
-    bool IsArrived
+    void Awake()
     {
-        get
-        {
-            if (roamTarget == Vector3.zero)
-                return false;
-            
-            var dist = Vector3.Distance(transform.position, roamTarget);
-            return dist < GlobalValues.IgnoreDistance;
-        }
+        CacheComponents();
     }
-
-    protected EnemyData Data { get; private set; }
 
     void Start()
     {
-        enemy = gameObject.GetComponent<Enemy>();
-        scanner = gameObject.GetComponent<ActorScanner>();
+        CacheComponents();
+        if (Data == null && enemy != null)
+        {
+            Init(enemy.Data);
+        }
+        else
+        {
+            ConfigureScanner();
+        }
 
-        basePoint = transform.position;
-        ChangeState(MonsterAIState.Idle);
+        ResetBrain(transform.position);
     }
 
     void Update()
     {
-        UpdateState();
-
-        var command = CreateCommand();
-        if (!ShouldSend(command))
+        if (!isReady)
             return;
-        
+
+        UpdateKnownTarget();
+        UpdatePerception();
+        ChangeState(EvaluateTransition());
+        TickState();
+    }
+
+    public void Init(ActorData data)
+    {
+        CacheComponents();
+
+        if (data is EnemyData e)
+        {
+            Data = e;
+            ConfigureScanner();
+        }
+    }
+
+    public void ResetBrain(Vector3 pos)
+    {
+        homePoint = pos;
+        ClearMoveTarget();
+        lastChaseTargetPosition = Vector3.zero;
+        target = null;
+        lastCommand = default;
+
+        aiState = MonsterAIState.Idle;
+        nextRoamTime = Time.time + RoamDelay;
+        nextAttackTime = 0f;
+    }
+
+    void CacheComponents()
+    {
+        if (enemy == null)
+            enemy = gameObject.GetComponent<Enemy>();
+
+        if (scanner == null)
+            scanner = gameObject.GetComponent<ActorScanner>();
+
+        isReady = enemy != null;
+    }
+
+    void ConfigureScanner()
+    {
+        if (scanner == null)
+            return;
+
+        scanner.Configure(DetectRadius, TargetLayers);
+    }
+
+    void UpdateKnownTarget()
+    {
+        if (target.IsNullOrDestroyed())
+            target = null;
+    }
+
+    void UpdatePerception()
+    {
+        if (target != null || scanner == null || aiState == MonsterAIState.Returning)
+            return;
+
+        target = scanner.GetTarget();
+    }
+
+    MonsterAIState EvaluateTransition()
+    {
+        if (aiState == MonsterAIState.Returning)
+            return IsArrived ? MonsterAIState.Idle : MonsterAIState.Returning;
+
+        if (IsOutLeashRange())
+        {
+            target = null;
+            return MonsterAIState.Returning;
+        }
+
+        if (target != null)
+        {
+            return IsInAttackRange() ? MonsterAIState.Attack : MonsterAIState.Chase;
+        }
+
+        if (aiState == MonsterAIState.Roaming)
+            return IsArrived ? MonsterAIState.Idle : MonsterAIState.Roaming;
+
+        if (Time.time >= nextRoamTime)
+            return MonsterAIState.Roaming;
+
+        return MonsterAIState.Idle;
+    }
+
+    void ChangeState(MonsterAIState newState)
+    {
+        if (aiState == newState)
+            return;
+
+        aiState = newState;
+        EnterState(newState);
+    }
+
+    void EnterState(MonsterAIState state)
+    {
+        switch (state)
+        {
+            case MonsterAIState.Idle:
+                EnterIdle();
+                break;
+            case MonsterAIState.Roaming:
+                EnterRoaming();
+                break;
+            case MonsterAIState.Returning:
+                EnterReturning();
+                break;
+            case MonsterAIState.Chase:
+                SendChaseCommand(force: true);
+                break;
+            case MonsterAIState.Attack:
+                SendAttackCommand(force: true);
+                break;
+            default:
+                MyDebug.LogWarning($"Not Defined MonsterAIState: {state}");
+                EnterIdle();
+                break;
+        }
+    }
+
+    void TickState()
+    {
+        switch (aiState)
+        {
+            case MonsterAIState.Roaming:
+                TickRoaming();
+                break;
+
+            case MonsterAIState.Returning:
+                TickReturning();
+                break;
+
+            case MonsterAIState.Chase:
+                TickChase();
+                break;
+
+            case MonsterAIState.Attack:
+                TickAttack();
+                break;
+        }
+    }
+
+    void EnterIdle()
+    {
+        ClearMoveTarget();
+        nextRoamTime = Time.time + RoamDelay;
+        SendCommandIfChanged(Command.Idle(enemy));
+    }
+
+    void EnterRoaming()
+    {
+        SetMoveTarget(GetNextPosition());
+        SendMoveCommand(force: true);
+    }
+
+    void EnterReturning()
+    {
+        target = null;
+        SetMoveTarget(homePoint);
+        SendMoveCommand(force: true);
+    }
+
+    void TickRoaming()
+    {
+        if (!IsArrived)
+            return;
+
+        ChangeState(MonsterAIState.Idle);
+    }
+
+    void TickReturning()
+    {
+        if (!IsArrived)
+            return;
+
+        ChangeState(MonsterAIState.Idle);
+    }
+
+    void TickChase()
+    {
+        if (target == null)
+        {
+            ChangeState(IsOutLeashRange() ? MonsterAIState.Returning : MonsterAIState.Roaming);
+            return;
+        }
+
+        var pos = target.transform.position;
+        if (GetHorizontalSqrDistance(pos, lastChaseTargetPosition) < GlobalValues.HMoveThresholdSqr)
+            return;
+
+        SendChaseCommand();
+    }
+
+    void TickAttack()
+    {
+        if (target == null)
+        {
+            ChangeState(IsOutLeashRange() ? MonsterAIState.Returning : MonsterAIState.Roaming);
+            return;
+        }
+
+        if (Time.time < nextAttackTime)
+            return;
+
+        SendAttackCommand(force: true);
+    }
+
+    void SendMoveCommand(bool force = false)
+    {
+        var dir = targetPosition - transform.position;
+        dir.SetY(0);
+
+        var command = new Command
+        {
+            IsActive = true,
+            State = ActorState.Move,
+            MoveDirection = targetPosition,
+            LookRotation = QuaternionExtensions.SafeLookRotation(dir, transform.rotation)
+        };
+
+        SendCommandIfChanged(command, force);
+    }
+
+    void SetMoveTarget(Vector3 position)
+    {
+        targetPosition = position;
+        hasMoveTarget = true;
+    }
+
+    void ClearMoveTarget()
+    {
+        targetPosition = Vector3.zero;
+        hasMoveTarget = false;
+    }
+
+    void SendChaseCommand(bool force = false)
+    {
+        if (target == null)
+            return;
+
+        var pos = target.transform.position;
+        var dir = pos - transform.position;
+        dir.SetY(0);
+
+        var command = new Command
+        {
+            IsActive = true,
+            State = ActorState.Move,
+            MoveDirection = pos,
+            LookRotation = QuaternionExtensions.SafeLookRotation(dir, transform.rotation)
+        };
+
+        SendCommandIfChanged(command, force);
+        lastChaseTargetPosition = pos;
+    }
+
+    void SendAttackCommand(bool force = false)
+    {
+        if (target == null)
+            return;
+
+        var dir = target.transform.position - transform.position;
+        dir.SetY(0);
+
+        var command = new Command
+        {
+            State = ActorState.Attack,
+            MoveDirection = transform.position,
+            LookRotation = QuaternionExtensions.SafeLookRotation(dir, transform.rotation),
+            TargetID = target.EntityID,
+            SkillID = 0
+        };
+
+        SendCommandIfChanged(command, force);
+        nextAttackTime = Time.time + AttackCooldown;
+    }
+
+    void SendCommandIfChanged(Command command, bool force = false)
+    {
+        if (!force && !ShouldSend(command))
+            return;
+
         var currentIndex = enemy.Snapshot.DataIndex;
         var nextIndex = currentIndex == 0 ? 1 : currentIndex + 1;
-        
+
         ActorSnapshot snapshot = new()
         {
             EntityID = enemy.EntityID,
             DataIndex = nextIndex,
-
             Position = command.MoveDirection,
             Rotation = command.LookRotation,
             State = command.State,
-
             TargetID = command.TargetID,
             SkillID = command.SkillID
         };
@@ -79,17 +378,6 @@ public class MonsterBrain : MonoBehaviour
         lastCommand = command;
     }
 
-    Command CreateCommand()
-    {
-        return aiState switch
-        {
-            MonsterAIState.Roaming => ProcessRoaming(),
-            MonsterAIState.Chase => ProcessChasing(),
-            MonsterAIState.Attack => ProcessAttack(),
-            _ => Command.Idle(enemy)
-        };
-    }
-    
     bool ShouldSend(Command command)
     {
         if (command.State != lastCommand.State)
@@ -101,7 +389,7 @@ public class MonsterBrain : MonoBehaviour
         if (command.SkillID != lastCommand.SkillID)
             return true;
 
-        if ((command.MoveDirection - lastCommand.MoveDirection).sqrMagnitude > GlobalValues.HMoveThresholdSqr)
+        if (GetHorizontalSqrDistance(command.MoveDirection, lastCommand.MoveDirection) > GlobalValues.HMoveThresholdSqr)
             return true;
 
         if (Quaternion.Angle(command.LookRotation, lastCommand.LookRotation) > GlobalValues.RotationAngleThreshold)
@@ -110,133 +398,78 @@ public class MonsterBrain : MonoBehaviour
         return false;
     }
 
-    public void Init(ActorData data)
+    Vector3 GetNextPosition()
     {
-        if (data is EnemyData e)
-        {
-            Data = e;
-        }
+        var random = Random.insideUnitSphere * RoamRadius;
+        random.SetY(0);
+
+        return homePoint + random;
     }
 
-    /// <summary>
-    /// 타겟이 없다 -> 새 타겟 탐지 -> 없으면 로밍
-    /// 타겟이 있다 -> 영역 밖이다 -> 타겟 버린다 -> 로밍
-    ///           -> 영역 안이다 -> 공격 범위다 -> 공격 / 추적
-    /// 타겟 업데이트 처리는 어디서?
-    /// </summary>
-    void UpdateState()
+    bool IsOutLeashRange()
+    {
+        return GetHorizontalSqrDistance(transform.position, homePoint) > LeashRange * LeashRange;
+    }
+
+    bool IsInAttackRange()
     {
         if (target == null)
-        {
-            UpdateTarget();
-        }
+            return false;
 
-        if (target == null)
-        {
-            ChangeState(MonsterAIState.Roaming);
+        return GetHorizontalSqrDistance(target.transform.position, transform.position) <= AttackRange * AttackRange;
+    }
+
+    static float GetHorizontalSqrDistance(Vector3 a, Vector3 b)
+    {
+        var dx = a.x - b.x;
+        var dz = a.z - b.z;
+
+        return dx * dx + dz * dz;
+    }
+
+#if UNITY_EDITOR
+
+    static readonly Color AttackRangeGizmoColor = Color.red;
+    static readonly Color DetectRangeGizmoColor = Color.yellow;
+    static readonly Color LeashRangeGizmoColor = Color.green;
+
+    void OnDrawGizmos()
+    {
+        var data = GetGizmoData();
+        var attackRange = data != null ? data.AttackRange : DefaultAttackRange;
+        var detectRadius = data != null ? data.DetectRadius : DefaultDetectRadius;
+        var leashRange = data != null ? data.LeashRange : DefaultLeashRange;
+
+        DrawRangeGizmo(GetLeashGizmoCenter(), leashRange, LeashRangeGizmoColor);
+        DrawRangeGizmo(detectRadius, DetectRangeGizmoColor);
+        DrawRangeGizmo(attackRange, AttackRangeGizmoColor);
+    }
+
+    EnemyData GetGizmoData()
+    {
+        if (Data != null)
+            return Data;
+
+        return TryGetComponent(out Enemy e) ? e.Data : null;
+    }
+
+    Vector3 GetLeashGizmoCenter()
+    {
+        return Application.isPlaying ? homePoint : transform.position;
+    }
+
+    void DrawRangeGizmo(float radius, Color color)
+    {
+        DrawRangeGizmo(transform.position, radius, color);
+    }
+
+    void DrawRangeGizmo(Vector3 center, float radius, Color color)
+    {
+        if (radius <= 0f)
             return;
-        }
 
-        var leashDist = Vector3.Distance(basePoint, transform.position);
-        if (leashDist > LeashRange)
-        {
-            target = null;
-            ChangeState(MonsterAIState.Roaming);
-            return;
-        }
-
-        var targetDist = Vector3.Distance(transform.position, target.transform.position);
-        if (targetDist < AttackRange)
-        {
-            ChangeState(MonsterAIState.Attack);
-        }
-        else
-        {
-            ChangeState(MonsterAIState.Chase);
-        }
+        Gizmos.color = color;
+        Gizmos.DrawWireSphere(center, radius);
     }
-
-    void ChangeState(MonsterAIState newState)
-    {
-        aiState = newState;
-    }
-
-    void UpdateTarget()
-    {
-        // todo : target 얻는 로직 개선 필요.
-        // 기본 규칙은 가까운 순
-        // 아군 & 적군에 대한 타겟 구분 필요, 위협도 우선 필요, 기존 타겟 우선 필요
-        target = scanner.GetTarget();
-    }
-
-    Command ProcessRoaming()
-    {
-        // todo : 업데이트 잦은 호출 개선 중
-        if (IsArrived)
-        {
-            // if (Time.time < nextRoamTime)
-            // {
-            //     return Command.Idle(enemy);
-            // }
-            //
-            // nextRoamTime = Time.time + Data.NextRoamingTime;
-
-            var random = Random.insideUnitSphere * RoamRadius;
-            random.SetY(0);
-
-            roamTarget = basePoint + random;
-            var dir = roamTarget - transform.position;
-            dir.SetY(0);
-
-            return new Command
-            {
-                IsActive = true,
-                State = ActorState.Move,
-                MoveDirection = roamTarget,
-                LookRotation = QuaternionExtensions.SafeLookRotation(dir, transform.rotation)
-            };
-        }
-    }
-
-    Command ProcessChasing()
-    {
-        if (target == null)
-        {
-            MyDebug.LogError("Target is null");
-            return Command.Idle(enemy);
-        }
-        
-        var targetPos = target.transform.position;
-        var dir = targetPos - transform.position;
-        dir.SetY(0);
-
-        return new Command
-        {
-            IsActive = true,
-            State = ActorState.Move,
-            MoveDirection = targetPos,
-            LookRotation = QuaternionExtensions.SafeLookRotation(dir, transform.rotation)
-        };
-    }
-
-    Command ProcessAttack()
-    {
-        if (target == null)
-        {
-            MyDebug.LogError("Target is null");
-            return Command.Idle(enemy);
-        }
-        
-        var dir = target.transform.position - transform.position;
-        dir.SetY(0);
-        
-        return new Command
-        {
-            State = ActorState.Attack,
-            LookRotation = QuaternionExtensions.SafeLookRotation(dir, transform.rotation),
-            
-            TargetID = target.EntityID,
-            SkillID = 0
-        };
-    }
+#endif
 }

@@ -18,10 +18,11 @@ public class Player : Actor
             else
                 moveController = GetComponent<RemoteMoveController>();
         }
-        
-        moveController.Init(data);
+
         base.Init();
     }
+
+    protected override ActorData GetActorData() => data;
 
     public override void Dead()
     {

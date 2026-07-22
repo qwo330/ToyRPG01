@@ -2,7 +2,8 @@ public class LocalMoveController : MoveController
 {
     public override void Process()
     {
-        var pseudoPos = transform.position + (Snapshot.Position * WalkSpeed);
+        var moveDirection = Snapshot.State == ActorState.Move ? Snapshot.Position : UnityEngine.Vector3.zero;
+        var pseudoPos = transform.position + (moveDirection * WalkSpeed);
         
         MoveTo(pseudoPos, isRemote: false);
         Rotate(Snapshot.Rotation);

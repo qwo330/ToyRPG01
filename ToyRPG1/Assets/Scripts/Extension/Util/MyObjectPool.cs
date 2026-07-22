@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Pool;
 using Object = UnityEngine.Object;
@@ -8,15 +9,18 @@ public class MyObjectPool<T> where T : MonoBehaviour
     public int defaultCapacity = 10;
     public int maxPoolSize = 10;
 
-    string assetPath = string.Empty;
-    // public string AssetPath
-    // {
-    //     set => assetPath = value;
-    // }
+    readonly string assetAddress;
+    readonly T prefab;
     
-    public MyObjectPool(string assetPath)
+    public MyObjectPool(T prefab)
     {
-        this.assetPath = assetPath;
+        this.prefab = prefab;
+    }
+
+    [Obsolete("path 방식 사용하지 않음")]
+    public MyObjectPool(string assetAddress)
+    {
+        this.assetAddress = assetAddress;
     }
     
     ObjectPool<T> pool;
@@ -46,20 +50,33 @@ public class MyObjectPool<T> where T : MonoBehaviour
     
     T CreatePooledItem()
     {
-        T asset = AddressableTool.LoadAsset<T>(assetPath);
-        T prefab = Object.Instantiate(asset);
-        return prefab;
+        var source = prefab != null ? prefab : AddressableTool.LoadAsset<T>(assetAddress);
+        if (source == null)
+        {
+            MyDebug.LogError($"Cannot create pooled item. Source is null: {typeof(T).Name}, {assetAddress}");
+            return null;
+        }
+
+        var item = Object.Instantiate(source);
+        item.gameObject.SetActive(false);
+        return item;
     }
     
     // Called when an item is returned to the pool using Release
     void OnReturnedToPool(T item)
     {
+        if (item == null)
+            return;
+
         item.gameObject.SetActive(false);
     }
     
     // Called when an item is taken from the pool using Get
     void OnTakeFromPool(T item)
     {
+        if (item == null)
+            return;
+
         item.gameObject.SetActive(true);
     }
     
@@ -67,6 +84,9 @@ public class MyObjectPool<T> where T : MonoBehaviour
     // We can control what the destroy behavior does, here we destroy the GameObject.
     void OnDestroyPoolObject(T item)
     {
+        if (item == null)
+            return;
+
         // Destroy(item.gameObject);
         Object.Destroy(item.gameObject);
     }

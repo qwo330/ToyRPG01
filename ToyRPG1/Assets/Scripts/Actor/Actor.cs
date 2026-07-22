@@ -13,22 +13,71 @@ public abstract class Actor : MonoBehaviour
     readonly List<IAction> actions = new();
 
     ActorAnimator actorAnimator;
+    bool isInitialized;
     
     void Start()
     {
+        InitializeIfNeeded();
+    }
+
+    void OnEnable()
+    {
+        if (isInitialized)
+            ActorManager.Instance.AddActor(this);
+    }
+
+    void OnDisable()
+    {
+        if (isInitialized)
+            ActorManager.Instance?.RemoveActor(this);
+    }
+
+    protected void InitializeIfNeeded()
+    {
+        if (isInitialized)
+            return;
+
         Init();
     }
 
     protected virtual void Init()
     {
+        isInitialized = true;
+
+        actions.Clear();
         actions.AddRange(gameObject.GetComponents<IAction>());
+
+        var data = GetActorData();
+        if (data != null)
+        {
+            MaxHP = data.MaxHP;
+            HP = MaxHP;
+
+            foreach (var action in actions)
+            {
+                action.Init(data);
+            }
+        }
+        else
+        {
+            HP = MaxHP;
+        }
         
         EntityID = gameObject.GetInstanceID();
+        ResetActorSnapshot();
         ActorManager.Instance.AddActor(this);
 
-        actorAnimator = GetComponent<ActorAnimator>();
-        actorAnimator.Init();
+        if (TryGetComponent(out actorAnimator))
+        {
+            actorAnimator.Init();
+        }
+        else
+        {
+            MyDebug.LogWarning($"Cannot find ActorAnimator component on {gameObject.name}");
+        }
     }
+
+    protected virtual ActorData GetActorData() => null;
 
     public void ApplySnapshot(ActorSnapshot s)
     {
@@ -45,9 +94,35 @@ public abstract class Actor : MonoBehaviour
 
     public void ProcessActions()
     {
+        if (!isActiveAndEnabled)
+            return;
+
         foreach (var action in actions)
         {
             action.Process();
+        }
+    }
+
+    protected void ResetActorSnapshot(ActorState state = ActorState.Idle)
+    {
+        ResetActorSnapshot(transform.position, transform.rotation, state);
+    }
+
+    protected void ResetActorSnapshot(Vector3 position, Quaternion rotation, ActorState state = ActorState.Idle)
+    {
+        Snapshot = new ActorSnapshot
+        {
+            EntityID = EntityID,
+            DataIndex = Snapshot.DataIndex + 1,
+            Position = position,
+            Rotation = rotation,
+            State = state
+        };
+
+        foreach (var action in actions)
+        {
+            if (action is IMove move)
+                move.Apply(Snapshot);
         }
     }
     
@@ -83,6 +158,8 @@ struct Command
 
         return new Command
         {
+            State = ActorState.Idle,
+            MoveDirection = actor.transform.position,
             LookRotation = actor.transform.rotation
         };
     }

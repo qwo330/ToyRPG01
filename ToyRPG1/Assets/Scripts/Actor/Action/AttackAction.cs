@@ -24,11 +24,10 @@ public class AttackAction : MonoBehaviour, IAttack
 
     public void Apply(ActorSnapshot snapshot)
     {
-        throw new System.NotImplementedException();
+        Snapshot = snapshot;
     }
 
     public void Process()
     {
-        throw new System.NotImplementedException();
     }
 }

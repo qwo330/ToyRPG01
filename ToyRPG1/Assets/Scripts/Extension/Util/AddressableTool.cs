@@ -1,56 +1,90 @@
+using System;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
-using System;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class AddressableTool : SingletonMono<AddressableTool>
 {
-//     public static void LoadAssetAsync<T>(string assetPath, Action<UnityEngine.Object> onResult) where T : UnityEngine.Object
-//     {
-//         if (string.IsNullOrEmpty(assetPath))
-//         {
-//             MyDebug.LogError($"Wrong Asset Path : {assetPath}");
-//             onResult?.Invoke(null);
-//             return;
-//         }
-//         
-//         string address = $"Assets/Bundles/{assetPath}";
-//         
-// #if ADDRESSABLES
-//
-// #elif UNITY_EDITOR
-//         T asset = UnityEditor.AssetDatabase.LoadAssetAtPath<T>(address);
-//         onResult?.Invoke(asset);
-// #endif
-//     }
-
-    public static T LoadAsset<T>(string assetPath) where T : UnityEngine.Object
+    public static T LoadAsset<T>(string assetAddress) where T : UnityEngine.Object
     {
-        if (string.IsNullOrEmpty(assetPath))
+        if (string.IsNullOrEmpty(assetAddress))
         {
-            MyDebug.LogError($"Wrong Asset Path : {assetPath}");
+            MyDebug.LogError($"Wrong Asset Address : {assetAddress}");
             return default;
         }
-        
-        string address = $"Assets/Bundles/Prefabs/{assetPath}";
-     
-        // 어드레서블 세팅 전 임시처리
-        // return Resources.Load<T>(address);
-        return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(address);
-        
-        // 하단 코드는 어드레서블 세팅 전까지 동작하지 않음
-#if ADDRESSABLES
-        var op = Addressables.LoadAssetAsync<T>(address);
-        op.Completed += (result) =>
-        {
-            
-        };
 
-        return op.WaitForCompletion();
-#elif UNITY_EDITOR
-        return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(address);
-#else
-        return Resources.Load<T>(address);
+        var asset = LoadAddressable<T>(assetAddress);
+        if (asset != null)
+            return asset;
+
+        asset = LoadAddressableComponent<T>(assetAddress);
+        if (asset != null)
+            return asset;
+
+#if UNITY_EDITOR
+        asset = LoadEditorAsset<T>(assetAddress);
+        if (asset != null)
+            return asset;
 #endif
+
+        MyDebug.LogError($"Cannot load asset: {assetAddress}");
+        return default;
     }
+
+    static T LoadAddressable<T>(string assetAddress) where T : UnityEngine.Object
+    {
+        AsyncOperationHandle<T> op = default;
+        try
+        {
+            op = Addressables.LoadAssetAsync<T>(assetAddress);
+            var asset = op.WaitForCompletion();
+            if (op.Status == AsyncOperationStatus.Succeeded)
+                return asset;
+
+            if (op.IsValid())
+                Addressables.Release(op);
+        }
+        catch (Exception e)
+        {
+            if (op.IsValid())
+                Addressables.Release(op);
+
+            MyDebug.LogWarning($"Addressable load failed: {assetAddress}, {e.Message}");
+        }
+
+        return default;
+    }
+
+    static T LoadAddressableComponent<T>(string assetAddress) where T : UnityEngine.Object
+    {
+        if (!typeof(Component).IsAssignableFrom(typeof(T)))
+            return default;
+
+        var prefab = LoadAddressable<GameObject>(assetAddress);
+        if (prefab == null)
+            return default;
+
+        return prefab.GetComponent(typeof(T)) as T;
+    }
+
+#if UNITY_EDITOR
+    static T LoadEditorAsset<T>(string assetAddress) where T : UnityEngine.Object
+    {
+        var path = assetAddress.StartsWith("Assets/")
+            ? assetAddress
+            : $"Assets/Bundles/Prefabs/{assetAddress}";
+
+        if (typeof(Component).IsAssignableFrom(typeof(T)))
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            return prefab != null ? prefab.GetComponent(typeof(T)) as T : default;
+        }
+
+        return AssetDatabase.LoadAssetAtPath<T>(path);
+    }
+#endif
 }
