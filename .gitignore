@@ -60,7 +60,9 @@ crashlytics-build.properties
 
 ToyRPG1/Assets/Plugins/Demigiant
 ToyRPG1/Assets/Plugins/Demigiant.meta
-ToyRPG1/ProjectSettings
+ToyRPG1/ProjectSettings/*
+!ToyRPG1/ProjectSettings/
+!ToyRPG1/ProjectSettings/TagManager.asset
 ToyRPG1/UserSettings
 ToyRPG1/Assets/MobileDependencyResolver
 ToyRPG1/Assets/MobileDependencyResolver.meta
