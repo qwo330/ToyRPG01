@@ -32,7 +32,7 @@ public class Enemy : Actor
         pool = sourcePool;
         released = onReleased;
 
-        HP = MaxHP;
+        ResetHealth();
         ResetActorSnapshot(spawnPoint, rotation);
 
         if (brain != null)
@@ -40,9 +40,11 @@ public class Enemy : Actor
             brain.Init(data);
             brain.ResetBrain(spawnPoint);
         }
+
+        PublishSpawned();
     }
 
-    public override void Dead()
+    protected override void OnDeadCore()
     {
         ReturnToPool();
     }

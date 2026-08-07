@@ -24,7 +24,7 @@ public class Player : Actor
 
     protected override ActorData GetActorData() => data;
 
-    public override void Dead()
+    protected override void OnDeadCore()
     {
         throw new System.NotImplementedException();
     }

@@ -226,7 +226,7 @@ public class PlayerControl : Actor
         ChangeState(EPlayerState.Idle);
     }
     
-    public override void Dead()
+    protected override void OnDeadCore()
     {
         MyDebug.LogError($"{gameObject.name} 죽음");
     }

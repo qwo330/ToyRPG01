@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using R3;
 using UnityEngine;
 
 [RequireComponent(typeof(ActorAnimator))]
@@ -9,15 +10,31 @@ public abstract class Actor : MonoBehaviour
     public int HP;
     
     public ActorSnapshot Snapshot { get; private set; }
+    public bool IsDead => isDead;
+    public Observable<ActorSpawnEvent> OnSpawned => spawnedSubject;
+    public Observable<ActorDespawnEvent> OnDespawned => despawnedSubject;
+    public Observable<ActorHitEvent> OnHit => hitSubject;
+    public Observable<ActorDeadEvent> OnDead => deadSubject;
+    public Observable<ActorHPChangedEvent> OnHealthChanged => healthChangedSubject;
+    public Observable<ActorSnapshot> OnSnapshotChanged => snapshotChangedSubject;
 
     readonly List<IAction> actions = new();
+    readonly Subject<ActorSpawnEvent> spawnedSubject = new();
+    readonly Subject<ActorDespawnEvent> despawnedSubject = new();
+    readonly Subject<ActorHitEvent> hitSubject = new();
+    readonly Subject<ActorDeadEvent> deadSubject = new();
+    readonly Subject<ActorHPChangedEvent> healthChangedSubject = new();
+    readonly Subject<ActorSnapshot> snapshotChangedSubject = new();
 
     ActorAnimator actorAnimator;
     bool isInitialized;
-    
+    bool isSpawned;
+    bool isDead;
+
     void Start()
     {
         InitializeIfNeeded();
+        PublishSpawned();
     }
 
     void OnEnable()
@@ -30,6 +47,18 @@ public abstract class Actor : MonoBehaviour
     {
         if (isInitialized)
             ActorManager.Instance?.RemoveActor(this);
+
+        PublishDespawned();
+    }
+
+    void OnDestroy()
+    {
+        spawnedSubject.Dispose();
+        despawnedSubject.Dispose();
+        hitSubject.Dispose();
+        deadSubject.Dispose();
+        healthChangedSubject.Dispose();
+        snapshotChangedSubject.Dispose();
     }
 
     protected void InitializeIfNeeded()
@@ -62,6 +91,8 @@ public abstract class Actor : MonoBehaviour
         {
             HP = MaxHP;
         }
+
+        isDead = false;
         
         EntityID = gameObject.GetInstanceID();
         ResetActorSnapshot();
@@ -90,6 +121,8 @@ public abstract class Actor : MonoBehaviour
         {
             action.Apply(Snapshot);
         }
+
+        PublishSnapshotChanged();
     }
 
     public void ProcessActions()
@@ -124,18 +157,93 @@ public abstract class Actor : MonoBehaviour
             if (action is IMove move)
                 move.Apply(Snapshot);
         }
+
+        PublishSnapshotChanged();
     }
     
-    public abstract void Dead();
-
-    public virtual void TakeDamage(Actor enemy, int power)
+    public void Dead()
     {
-        HP -= power;
+        var previousHP = HP;
+        if (HP > 0)
+        {
+            HP = 0;
+            PublishHealthChanged(null, previousHP, HP);
+        }
+
+        TryDead(null, previousHP, previousHP);
+    }
+
+    public virtual void TakeDamage(Actor attacker, int power)
+    {
+        if (isDead)
+            return;
+
+        var damage = Mathf.Max(0, power);
+        if (damage == 0)
+            return;
+
+        var previousHP = HP;
+        HP = Mathf.Max(0, HP - damage);
+
+        PublishHealthChanged(attacker, previousHP, HP);
+        hitSubject.OnNext(new ActorHitEvent(this, attacker, damage, previousHP, HP, MaxHP));
         
         if (HP <= 0)
         {
-            Dead();
+            TryDead(attacker, previousHP, damage);
         }
+    }
+
+    protected abstract void OnDeadCore();
+
+    protected void ResetHealth()
+    {
+        var previousHP = HP;
+        HP = MaxHP;
+        isDead = false;
+        PublishHealthChanged(null, previousHP, HP);
+    }
+
+    protected void PublishSpawned()
+    {
+        if (isSpawned)
+            return;
+
+        isSpawned = true;
+        spawnedSubject.OnNext(new ActorSpawnEvent(this, transform.position, transform.rotation, Snapshot));
+    }
+
+    bool TryDead(Actor attacker, int previousHP, int damage)
+    {
+        if (isDead)
+            return false;
+
+        isDead = true;
+        deadSubject.OnNext(new ActorDeadEvent(this, attacker, damage, previousHP, HP, MaxHP));
+        OnDeadCore();
+        return true;
+    }
+
+    void PublishDespawned()
+    {
+        if (!isSpawned)
+            return;
+
+        isSpawned = false;
+        despawnedSubject.OnNext(new ActorDespawnEvent(this, Snapshot));
+    }
+
+    void PublishHealthChanged(Actor source, int previousHP, int currentHP)
+    {
+        if (previousHP == currentHP)
+            return;
+
+        healthChangedSubject.OnNext(new ActorHPChangedEvent(this, source, previousHP, currentHP, MaxHP));
+    }
+
+    void PublishSnapshotChanged()
+    {
+        snapshotChangedSubject.OnNext(Snapshot);
     }
 }
 
