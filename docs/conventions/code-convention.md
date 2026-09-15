@@ -16,7 +16,6 @@
 - 접근 제한자보다 Unity lifecycle과 호출 흐름을 우선한다.
 - 외부에서 사용하는 event, property, public method는 private 구현보다 위에 둔다.
 - 필드는 선언적 특성(상수, 정적, 읽기 전용, 직렬화 등)에 따라 그룹화한다.
-- 한 메서드에서만 쓰는 짧은 helper는 호출자 아래에 둘 수 있다. 여러 곳에서 쓰는 helper는 관련 private 영역에 모은다.
 - 같은 구역은 중요도, 실행 순서, 호출 순서로 정렬한다. 알파벳 순서는 큰 열거형이나 매핑처럼 탐색성이 더 중요할 때만 사용한다.
 
 ## 클래스 멤버 선언 순서
@@ -46,7 +45,6 @@
 - static : mutable static field는 가급적 사용하지 않는다.
 - [SerializeField] : Inspector 표시 순서는 프리팹 / 컴포넌트 참조, 데이터 에셋, 주요 수치, 옵션 플래그, 개발용 설정 순서를 권장한다. private field로 선언하고 읽기 전용 public property를 같이 선언한다.
 - public field : Data Transfer Object, Serialization 컨테이너, 기존 코드 호환처럼 명확한 사유가 있을 때만 사용한다.
-- event : public property 전후에 둔다.
 - property : 외부에서 읽는 API를 먼저 보여준다.
 - mutable field : 관련 항목끼리 묶는다.
 - editor-only : `#if UNITY_EDITOR`로 감싼다.
