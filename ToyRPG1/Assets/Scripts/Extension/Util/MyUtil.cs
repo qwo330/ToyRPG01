@@ -102,44 +102,6 @@ public static class MyUtil
     }
 }
 
-public static class WaitTimeCache
-{
-    public static readonly WaitForEndOfFrame EndFrame = new WaitForEndOfFrame();
-
-    static readonly WaitForSecondsRealtime realTick = new WaitForSecondsRealtime(0.01f);
-
-    public static IEnumerator<WaitForSeconds> WaitForSeconds(float seconds)
-    {
-        float t = 0;
-        while (t < seconds)
-        {
-            t += Time.deltaTime;
-            yield return null;
-        }
-    }
-
-    public static IEnumerator<WaitForSecondsRealtime> WaitForSecondsRealtime(float seconds)
-    {
-        int loopCount = (int)seconds * 100;
-        for (int i = 0; i < loopCount; i++)
-        {
-            yield return realTick;
-        }
-    }
-
-    public static IEnumerator TimerCallbackCoroutine(float seconds, Action action)
-    {
-        float t = 0;
-        while (t < seconds)
-        {
-            t += Time.deltaTime;
-            yield return null;
-        }
-
-        action?.Invoke();
-    }
-}
-
 public static class VectorExtensions
 {
     public static void SetY(this ref Vector3 vector, float y)
