@@ -9569,6 +9569,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveSpeed: 10
   sqrEffectiveRange: 25
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 64
 --- !u!65 &5652638032249638659
 BoxCollider:
   m_ObjectHideFlags: 0

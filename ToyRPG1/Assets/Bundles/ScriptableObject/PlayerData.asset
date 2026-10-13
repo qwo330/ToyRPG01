@@ -13,13 +13,14 @@ MonoBehaviour:
   m_Name: PlayerData
   m_EditorClassIdentifier: 
   MaxHP: 100
+  AttackPower: 10
   WalkSpeed: 5
   RotSpeed: 5
   Acceleration: 30
   JumpPower: 8
   Gravity: 10
   AttackCooltime: 2
-  AttackRange: 3
+  AttackRange: 4
   AttackTimings:
   - InputStart: 0.25
     InputEnd: 0.42

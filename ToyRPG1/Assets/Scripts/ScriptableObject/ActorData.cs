@@ -3,6 +3,7 @@ using UnityEngine;
 public class ActorData : ScriptableObject
 {
     public int MaxHP;
+    public int AttackPower = 10;
     
     public float WalkSpeed;
     public float RotSpeed;

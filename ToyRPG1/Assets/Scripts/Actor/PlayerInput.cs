@@ -53,14 +53,20 @@ public class PlayerInput : MonoBehaviour
         var currentIndex = player.Snapshot.DataIndex;
         var nextIndex = currentIndex == 0 ? 1 : currentIndex + 1;
         
+        var snapshotPosition = finalCommand.State == ActorState.Move
+            ? finalCommand.MoveDirection
+            : transform.position;
+
         ActorSnapshot s = new()
         {
             EntityID = player.EntityID,
             DataIndex = nextIndex,
-            Position = finalCommand.MoveDirection,
+            Position = snapshotPosition,
             Rotation = finalCommand.LookRotation,
             State = finalCommand.State,
-            Combo = attackState.Combo
+            Combo = attackState.Combo,
+            TargetID = finalCommand.TargetID,
+            SkillID = finalCommand.SkillID
         };
         
         ActorManager.Instance.AddSnapshot(s);
@@ -111,7 +117,8 @@ public class PlayerInput : MonoBehaviour
             Priority = priority,
             State = ActorState.Attack,
             MoveDirection = Vector3.zero,
-            LookRotation = transform.rotation
+            LookRotation = transform.rotation,
+            SkillID = 0
         };
     }
 

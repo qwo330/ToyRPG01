@@ -11,6 +11,7 @@ public struct ComboAttackState
 
     public int Combo { get; private set; }
     public bool IsAttacking => Combo > 0;
+    public bool IsComboStartedThisTick { get; private set; }
 
     AttackTiming[] Timings => timings != null && timings.Length > 0 ? timings : DefaultTimings;
     int MaxCombo => Timings.Length;
@@ -19,6 +20,7 @@ public struct ComboAttackState
     AttackTiming[] timings;
     float elapsedTime;
     float recoveryTime;
+    bool isNextComboBuffered;
 
     public void Init(AttackTiming[] attackTimings)
     {
@@ -28,6 +30,8 @@ public struct ComboAttackState
 
     public void Tick(bool attackPressed, float deltaTime)
     {
+        IsComboStartedThisTick = false;
+
         recoveryTime -= deltaTime;
         if (recoveryTime > 0f)
             return;
@@ -45,13 +49,16 @@ public struct ComboAttackState
         var timing = GetTiming(Combo);
 
         if (attackPressed && HasNextCombo && timing.CanBufferInput(elapsedTime))
+            isNextComboBuffered = true;
+
+        if (elapsedTime < timing.AttackEnd)
+            return;
+
+        if (isNextComboBuffered && HasNextCombo)
         {
             Begin(Combo + 1);
             return;
         }
-
-        if (elapsedTime < timing.AttackEnd)
-            return;
 
         Reset(timing.RecoveryDuration);
     }
@@ -65,8 +72,10 @@ public struct ComboAttackState
     void Begin(int combo)
     {
         Combo = combo;
+        IsComboStartedThisTick = true;
         elapsedTime = 0f;
         recoveryTime = 0f;
+        isNextComboBuffered = false;
     }
 
     void Reset(float recoveryDuration = 0f)
@@ -74,5 +83,6 @@ public struct ComboAttackState
         Combo = 0;
         elapsedTime = 0f;
         recoveryTime = recoveryDuration;
+        isNextComboBuffered = false;
     }
 }

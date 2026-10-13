@@ -11,6 +11,9 @@ public class Player : Actor
 
     protected override void Init()
     {
+        if (!TryGetComponent<AttackAction>(out _))
+            MyDebug.LogError($"Cannot find AttackAction component on {gameObject.name}");
+
         if (moveController == null)
         {
             if (localPlayer)

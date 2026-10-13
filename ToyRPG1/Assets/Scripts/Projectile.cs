@@ -7,9 +7,11 @@ public class Projectile : MonoBehaviour
 {
     [SerializeField] float moveSpeed;
     [SerializeField] float sqrEffectiveRange = 25f;
+    [SerializeField] LayerMask targetLayers = GameLayers.EnemyMask;
     
     Vector3 startPoint;
     Vector3 direction;
+    Actor owner;
     int power;
     bool isPlaying;
     
@@ -38,27 +40,34 @@ public class Projectile : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Map"))
+        if (IsTargetLayer(other))
         {
-            OnReturnToPool();
+            Actor target = other.GetComponentInParent<Actor>();
+            Hit(target, other.ClosestPoint(transform.position));
         }
-        else if (other.CompareTag("Monster"))
+        else
         {
-            Actor target = other.GetComponent<Actor>();
-            Hit(target);
+            MyDebug.Log(other.name + " is not a target");
+            OnReturnToPool();
         }
     }
 
     public void Play(Vector3 direction, int power)
     {
+        Play(direction, power, null);
+    }
+
+    public void Play(Vector3 direction, int power, Actor owner)
+    {
         this.startPoint = transform.position;
         this.direction = direction;
         this.power = power;
+        this.owner = owner;
         
         isPlaying = true;
     }
     
-    public void Hit(Actor target)
+    public void Hit(Actor target, Vector3 hitPoint)
     {
         if (target == null)
         {
@@ -71,13 +80,25 @@ public class Projectile : MonoBehaviour
             MyDebug.LogError("Power is not set");
         }
         
-        target.TakeDamage(target, power);
+        target.TakeDamage(new DamageInfo(owner, power, hitPoint));
         OnReturnToPool();
+    }
+
+    bool IsTargetLayer(Collider target)
+    {
+        return (targetLayers.value & (1 << target.gameObject.layer)) != 0;
     }
     
     void OnReturnToPool()
     {
         isPlaying = false;
+        owner = null;
+
+        if (pool == null)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
         
         pool.Release(this);
     }

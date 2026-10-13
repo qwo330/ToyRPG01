@@ -173,24 +173,24 @@ public abstract class Actor : MonoBehaviour
         TryDead(null, previousHP, previousHP);
     }
 
-    public virtual void TakeDamage(Actor attacker, int power)
+    public virtual void TakeDamage(DamageInfo damageInfo)
     {
         if (isDead)
             return;
 
-        var damage = Mathf.Max(0, power);
+        var damage = Mathf.Max(0, damageInfo.Amount);
         if (damage == 0)
             return;
 
         var previousHP = HP;
         HP = Mathf.Max(0, HP - damage);
 
-        PublishHealthChanged(attacker, previousHP, HP);
-        hitSubject.OnNext(new ActorHitEvent(this, attacker, damage, previousHP, HP, MaxHP));
+        PublishHealthChanged(damageInfo.Attacker, previousHP, HP);
+        hitSubject.OnNext(new ActorHitEvent(this, damageInfo.Attacker, damage, previousHP, HP, MaxHP));
         
         if (HP <= 0)
         {
-            TryDead(attacker, previousHP, damage);
+            TryDead(damageInfo.Attacker, previousHP, damage);
         }
     }
 

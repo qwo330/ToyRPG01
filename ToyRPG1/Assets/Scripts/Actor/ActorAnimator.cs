@@ -30,5 +30,14 @@ public class ActorAnimator :  AnimationController
     
     public void Init()
     {
+        actor = GetComponentInParent<Actor>();
+        if (Animator == null || actor == null)
+            return;
+
+        var dispatcher = Animator.GetComponent<AnimationEventDispatcher>();
+        if (dispatcher == null)
+            dispatcher = Animator.gameObject.AddComponent<AnimationEventDispatcher>();
+
+        dispatcher.Initialize(actor.gameObject);
     }
 }

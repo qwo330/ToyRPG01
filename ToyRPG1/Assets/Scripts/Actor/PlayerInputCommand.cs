@@ -7,4 +7,6 @@ public struct PlayerInputCommand
     public ActorState State;
     public Vector3 MoveDirection;
     public Quaternion LookRotation;
+    public int TargetID;
+    public int SkillID;
 }
