@@ -46,9 +46,14 @@ public abstract class AttackAction : MonoBehaviour, IAttack
         Snapshot = snapshot;
     }
 
+    public virtual bool CanProcess()
+    {
+        return isActiveAndEnabled && Actor != null && Actor.CanAct;
+    }
+
     public virtual void Process()
     {
-        if (!IsAttackSnapshot(Snapshot))
+        if (!CanProcess() || !IsAttackSnapshot(Snapshot))
         {
             ResetAttack();
             return;

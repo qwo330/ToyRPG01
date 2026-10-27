@@ -26,6 +26,9 @@ public class PlayerInput : MonoBehaviour
 
     void Update()
     {
+        if (player == null || !player.CanAct)
+            return;
+
         Span<PlayerInputCommand> commands = stackalloc PlayerInputCommand[]
         {
             EvaluateAttackCommand(priority: 4),

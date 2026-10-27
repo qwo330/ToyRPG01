@@ -72,7 +72,7 @@ public class MonsterBrain : MonoBehaviour
 
     void Update()
     {
-        if (!isReady)
+        if (!isReady || !enemy.CanAct)
             return;
 
         UpdateKnownTarget();
@@ -126,7 +126,7 @@ public class MonsterBrain : MonoBehaviour
 
     void UpdateKnownTarget()
     {
-        if (target.IsNullOrDestroyed())
+        if (target.IsNullOrDestroyed() || target.IsDead)
             target = null;
     }
 

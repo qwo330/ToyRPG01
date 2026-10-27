@@ -15,6 +15,7 @@ public abstract class MoveController : MonoBehaviour, IMove
     
     protected ActorData Data { get; private set; }
 
+    Actor actor;
     CharacterController controller;
     float gVelocity;
     Vector3 currentVelocity;
@@ -35,6 +36,14 @@ public abstract class MoveController : MonoBehaviour, IMove
 
         if (snapshot.State != ActorState.Move)
             ResetMotion();
+    }
+
+    public virtual bool CanProcess()
+    {
+        if (actor == null)
+            actor = GetComponentInParent<Actor>();
+
+        return isActiveAndEnabled && actor != null && actor.CanAct;
     }
 
     public abstract void Process();
@@ -89,8 +98,6 @@ public abstract class MoveController : MonoBehaviour, IMove
         var motion = currentVelocity;
         motion.y = gVelocity;
 
-        var actor = gameObject.GetComponentInParent<Actor>();
-        MyDebug.Log($"Move: {motion}, actor id : {actor?.EntityID ?? 0}");
         controller.Move(motion * Time.deltaTime);
         return;
 
@@ -162,6 +169,12 @@ public class RemoteMoveController : MoveController
 
     public override void Process()
     {
+        if (!CanProcess())
+        {
+            ResetMotion();
+            return;
+        }
+
         var worldPos = Snapshot.State == ActorState.Move ? Snapshot.Position : transform.position;
         
         MoveTo(worldPos, isRemote: true, allowRelocation: allowRelocation);

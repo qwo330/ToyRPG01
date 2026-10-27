@@ -16,6 +16,9 @@ public class ProjectileAttackAction : AttackAction
 
     public override void OnNormalAttackEvent()
     {
+        if (!CanProcess())
+            return;
+
         var projectile = GetProjectile();
         if (projectile == null)
             return;

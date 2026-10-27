@@ -27,8 +27,8 @@ public class Player : Actor
 
     protected override ActorData GetActorData() => data;
 
-    protected override void OnDeadCore()
+    protected override void OnDeathAnimationEnd()
     {
-        throw new System.NotImplementedException();
+        gameObject.SetActive(false);
     }
 }

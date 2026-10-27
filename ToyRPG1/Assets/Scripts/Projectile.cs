@@ -33,6 +33,7 @@ public class Projectile : MonoBehaviour
         if (IsInvaildRange)
         {
             OnReturnToPool();
+            return;
         }
 
         transform.position += direction * moveSpeed * Time.deltaTime;
@@ -40,9 +41,15 @@ public class Projectile : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
+        if (!isPlaying)
+            return;
+
+        var target = other.GetComponentInParent<Actor>();
+        if (target != null && target.IsDead)
+            return;
+
         if (IsTargetLayer(other))
         {
-            Actor target = other.GetComponentInParent<Actor>();
             Hit(target, other.ClosestPoint(transform.position));
         }
         else
@@ -74,6 +81,9 @@ public class Projectile : MonoBehaviour
             MyDebug.LogError("Target is Null");
             return;
         }
+
+        if (target.IsDead)
+            return;
         
         if (power == 0)
         {

@@ -1,7 +1,6 @@
 using System;
 using UnityEngine;
 
-[RequireComponent(typeof(ActorAnimator))]
 [RequireComponent(typeof(RemoteMoveController))]
 [RequireComponent(typeof(MonsterBrain))]
 public class Enemy : Actor
@@ -44,7 +43,7 @@ public class Enemy : Actor
         PublishSpawned();
     }
 
-    protected override void OnDeadCore()
+    protected override void OnDeathAnimationEnd()
     {
         ReturnToPool();
     }

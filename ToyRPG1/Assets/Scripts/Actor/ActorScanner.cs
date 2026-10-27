@@ -34,7 +34,7 @@ public class ActorScanner : MonoBehaviour
                 continue;
 
             var actor = targetCollider.GetComponentInParent<Actor>();
-            if (actor == null || actor.gameObject == gameObject)
+            if (actor == null || actor.IsDead || actor.gameObject == gameObject)
                 continue;
 
             var sqrDistance = (actor.transform.position - origin).sqrMagnitude;
@@ -62,14 +62,31 @@ public class ActorScanner : MonoBehaviour
             transform.position,
             scanRadius,
             targets,
-            targetLayers,
+            targetLayers.value & ~GameLayers.DeadActorMask,
             QueryTriggerInteraction.Ignore);
+
+        var validCount = 0;
+        for (var i = 0; i < targetCount; i++)
+        {
+            var targetCollider = targets[i];
+            if (targetCollider == null)
+                continue;
+
+            var actor = targetCollider.GetComponentInParent<Actor>();
+            if (actor == null || actor.IsDead || actor.gameObject == gameObject)
+                continue;
+
+            targets[validCount++] = targetCollider;
+        }
+
+        System.Array.Clear(targets, validCount, targets.Length - validCount);
+        targetCount = validCount;
     }
 
     void EnsureTargetBuffer()
     {
         var capacity = Mathf.Max(1, scanMaxCount);
-        if (targets == null || targets.Length != capacity)
+        if (targets == null || targets.Length < capacity)
             targets = new Collider[capacity];
     }
 

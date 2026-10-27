@@ -11,6 +11,8 @@ public interface IAction
     /// 갱신되는 정보에 대한 처리
     /// </summary>
     public void Apply(ActorSnapshot snapshot);
+
+    public bool CanProcess();
     
     /// <summary>
     /// Action에서 구현되는 동작

@@ -9,6 +9,7 @@ public static class GameLayers
     public const int PlayerProjectile = 11;
     public const int EnemyProjectile = 12;
     public const int Sensor = 13;
+    public const int DeadActor = 14;
 
     public const int PlayerMask = 1 << Player;
     public const int EnemyMask = 1 << Enemy;
@@ -19,4 +20,5 @@ public static class GameLayers
     public const int PlayerProjectileMask = 1 << PlayerProjectile;
     public const int EnemyProjectileMask = 1 << EnemyProjectile;
     public const int SensorMask = 1 << Sensor;
+    public const int DeadActorMask = 1 << DeadActor;
 }

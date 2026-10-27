@@ -10,7 +10,9 @@ public abstract class Actor : MonoBehaviour
     public int HP;
     
     public ActorSnapshot Snapshot { get; private set; }
-    public bool IsDead => isDead;
+    public bool IsDead { get; private set; }
+    public virtual bool CanAct => isActiveAndEnabled && !IsDead;
+
     public Observable<ActorSpawnEvent> OnSpawned => spawnedSubject;
     public Observable<ActorDespawnEvent> OnDespawned => despawnedSubject;
     public Observable<ActorHitEvent> OnHit => hitSubject;
@@ -18,7 +20,12 @@ public abstract class Actor : MonoBehaviour
     public Observable<ActorHPChangedEvent> OnHealthChanged => healthChangedSubject;
     public Observable<ActorSnapshot> OnSnapshotChanged => snapshotChangedSubject;
 
+    protected bool IsInitialized { get; private set; }
+    protected bool IsSpawned { get; private set; }
+    protected bool IsDeathFinalized { get; private set; }
+
     readonly List<IAction> actions = new();
+    readonly Dictionary<GameObject, int> originalLayers = new();
     readonly Subject<ActorSpawnEvent> spawnedSubject = new();
     readonly Subject<ActorDespawnEvent> despawnedSubject = new();
     readonly Subject<ActorHitEvent> hitSubject = new();
@@ -27,9 +34,6 @@ public abstract class Actor : MonoBehaviour
     readonly Subject<ActorSnapshot> snapshotChangedSubject = new();
 
     ActorAnimator actorAnimator;
-    bool isInitialized;
-    bool isSpawned;
-    bool isDead;
 
     void Start()
     {
@@ -39,13 +43,13 @@ public abstract class Actor : MonoBehaviour
 
     void OnEnable()
     {
-        if (isInitialized)
+        if (IsInitialized)
             ActorManager.Instance.AddActor(this);
     }
 
     void OnDisable()
     {
-        if (isInitialized)
+        if (IsInitialized)
             ActorManager.Instance?.RemoveActor(this);
 
         PublishDespawned();
@@ -63,7 +67,7 @@ public abstract class Actor : MonoBehaviour
 
     protected void InitializeIfNeeded()
     {
-        if (isInitialized)
+        if (IsInitialized)
             return;
 
         Init();
@@ -71,7 +75,7 @@ public abstract class Actor : MonoBehaviour
 
     protected virtual void Init()
     {
-        isInitialized = true;
+        IsInitialized = true;
 
         actions.Clear();
         actions.AddRange(gameObject.GetComponents<IAction>());
@@ -92,7 +96,7 @@ public abstract class Actor : MonoBehaviour
             HP = MaxHP;
         }
 
-        isDead = false;
+        IsDead = false;
         
         EntityID = gameObject.GetInstanceID();
         ResetActorSnapshot();
@@ -112,7 +116,7 @@ public abstract class Actor : MonoBehaviour
 
     public void ApplySnapshot(ActorSnapshot s)
     {
-        if (Snapshot.DataIndex >= s.DataIndex)
+        if (IsDead || Snapshot.DataIndex >= s.DataIndex)
             return;
         
         Snapshot = s;
@@ -175,7 +179,7 @@ public abstract class Actor : MonoBehaviour
 
     public virtual void TakeDamage(DamageInfo damageInfo)
     {
-        if (isDead)
+        if (IsDead)
             return;
 
         var damage = Mathf.Max(0, damageInfo.Amount);
@@ -186,50 +190,99 @@ public abstract class Actor : MonoBehaviour
         HP = Mathf.Max(0, HP - damage);
 
         PublishHealthChanged(damageInfo.Attacker, previousHP, HP);
-        hitSubject.OnNext(new ActorHitEvent(this, damageInfo.Attacker, damage, previousHP, HP, MaxHP));
         
         if (HP <= 0)
         {
             TryDead(damageInfo.Attacker, previousHP, damage);
+            return;
         }
+
+        hitSubject.OnNext(new ActorHitEvent(this, damageInfo.Attacker, damage, previousHP, HP, MaxHP));
     }
 
-    protected abstract void OnDeadCore();
+    public void OnDeathAnimationEndEvent()
+    {
+        if (!IsDead || IsDeathFinalized)
+            return;
+
+        IsDeathFinalized = true;
+        OnDeathAnimationEnd();
+    }
+
+    protected abstract void OnDeathAnimationEnd();
 
     protected void ResetHealth()
     {
-        var previousHP = HP;
+        RestoreLayers();
         HP = MaxHP;
-        isDead = false;
-        PublishHealthChanged(null, previousHP, HP);
+        IsDead = false;
+        IsDeathFinalized = false;
+        PublishHealthChanged(null, HP, HP);
     }
 
     protected void PublishSpawned()
     {
-        if (isSpawned)
+        if (IsSpawned)
             return;
 
-        isSpawned = true;
+        IsSpawned = true;
         spawnedSubject.OnNext(new ActorSpawnEvent(this, transform.position, transform.rotation, Snapshot));
     }
 
     bool TryDead(Actor attacker, int previousHP, int damage)
     {
-        if (isDead)
+        if (IsDead)
             return false;
 
-        isDead = true;
+        IsDead = true;
+        IsDeathFinalized = false;
+        SetDeathLayer();
+        ResetActorSnapshot(ActorState.Dead);
         deadSubject.OnNext(new ActorDeadEvent(this, attacker, damage, previousHP, HP, MaxHP));
-        OnDeadCore();
+
+        if (actorAnimator == null || !actorAnimator.HasDeathAnimationEndEvent())
+            OnDeathAnimationEndEvent();
+        
         return true;
+    }
+
+    void SetDeathLayer()
+    {
+        originalLayers.Clear();
+        originalLayers.Add(gameObject, gameObject.layer);
+        gameObject.layer = GameLayers.DeadActor;
+
+        foreach (var collider in GetComponentsInChildren<Collider>(true))
+        {
+            if (collider.GetComponentInParent<Actor>() != this)
+                continue;
+
+            var target = collider.gameObject;
+            if (originalLayers.ContainsKey(target))
+                continue;
+
+            originalLayers.Add(target, target.layer);
+            target.layer = GameLayers.DeadActor;
+        }
+    }
+
+    void RestoreLayers()
+    {
+        foreach (var entry in originalLayers)
+        {
+            if (entry.Key != null)
+                entry.Key.layer = entry.Value;
+        }
+
+        originalLayers.Clear();
     }
 
     void PublishDespawned()
     {
-        if (!isSpawned)
+        if (!IsSpawned)
             return;
 
-        isSpawned = false;
+        IsSpawned = false;
         despawnedSubject.OnNext(new ActorDespawnEvent(this, Snapshot));
     }
 
