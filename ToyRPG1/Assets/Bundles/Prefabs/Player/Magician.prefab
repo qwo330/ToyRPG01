@@ -190,7 +190,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03dd72af5fd04d7ea5d019060916a7e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectileAttackAction
-  defaultAttackPower: 1
   projectilePrefab: {fileID: 4365711112982892642, guid: d39f07caa24f6cf44b594176f30afa1b, type: 3}
   firePoint: {fileID: 4981659018673241104}
 --- !u!114 &6758737162077734291

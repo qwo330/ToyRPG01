@@ -19,7 +19,7 @@ MonoBehaviour:
   Acceleration: 30
   JumpPower: 8
   Gravity: 10
-  AttackCooltime: 2
+  AttackCooltime: 0.25
   AttackRange: 4
   AttackTimings:
   - InputStart: 0.25

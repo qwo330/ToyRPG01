@@ -3,31 +3,33 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public abstract class MoveController : MonoBehaviour, IMove
 {
-    const float DefaultWalkSpeed = 6f;
-    const float DefaultRotSpeed = 5f;
-    const float DefaultAcceleration = 30f;
-
     public ActorSnapshot Snapshot { get; private set; }
     
-    public float WalkSpeed => Data != null ? Data.WalkSpeed : DefaultWalkSpeed;
-    public float RotSpeed => Data != null ? Data.RotSpeed : DefaultRotSpeed;
-    public float Acceleration => Data != null ? Data.Acceleration : DefaultAcceleration;
-    
-    protected ActorData Data { get; private set; }
+    public float WalkSpeed => Actor.GetWalkSpeed();
+    public float RotSpeed => Actor.GetRotationSpeed();
+    public float Acceleration => Actor.GetAcceleration();
 
-    Actor actor;
+    protected Actor Actor { get; private set; }
+
     CharacterController controller;
     float gVelocity;
     Vector3 currentVelocity;
 
     void Awake()
     {
+        if (!TryGetComponent(out Actor actor))
+        {
+            MyDebug.LogError($"Cannot find Actor component on {gameObject.name}");
+            enabled = false;
+            return;
+        }
+
+        Actor = actor;
         controller = GetComponent<CharacterController>();
     }
 
     public void Init(ActorData data)
     {
-        Data = data;
     }
 
     public virtual void Apply(ActorSnapshot snapshot)
@@ -40,10 +42,7 @@ public abstract class MoveController : MonoBehaviour, IMove
 
     public virtual bool CanProcess()
     {
-        if (actor == null)
-            actor = GetComponentInParent<Actor>();
-
-        return isActiveAndEnabled && actor != null && actor.CanAct;
+        return isActiveAndEnabled && Actor.CanAct;
     }
 
     public abstract void Process();

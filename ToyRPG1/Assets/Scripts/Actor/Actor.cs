@@ -5,10 +5,13 @@ using UnityEngine;
 [RequireComponent(typeof(ActorAnimator))]
 public abstract class Actor : MonoBehaviour
 {
+    [SerializeField] ActorData data;
+
     public int EntityID;
     public int MaxHP;
     public int HP;
     
+    public ActorData Data => data;
     public ActorSnapshot Snapshot { get; private set; }
     public bool IsDead { get; private set; }
     public virtual bool CanAct => isActiveAndEnabled && !IsDead;
@@ -34,6 +37,15 @@ public abstract class Actor : MonoBehaviour
     readonly Subject<ActorSnapshot> snapshotChangedSubject = new();
 
     ActorAnimator actorAnimator;
+
+    void Awake()
+    {
+        if (data != null)
+            return;
+
+        MyDebug.LogError($"ActorData is not set on {gameObject.name}");
+        gameObject.SetActive(false);
+    }
 
     void Start()
     {
@@ -80,20 +92,12 @@ public abstract class Actor : MonoBehaviour
         actions.Clear();
         actions.AddRange(gameObject.GetComponents<IAction>());
 
-        var data = GetActorData();
-        if (data != null)
-        {
-            MaxHP = data.MaxHP;
-            HP = MaxHP;
+        MaxHP = Data.MaxHP;
+        HP = MaxHP;
 
-            foreach (var action in actions)
-            {
-                action.Init(data);
-            }
-        }
-        else
+        foreach (var action in actions)
         {
-            HP = MaxHP;
+            action.Init(Data);
         }
 
         IsDead = false;
@@ -112,7 +116,19 @@ public abstract class Actor : MonoBehaviour
         }
     }
 
-    protected virtual ActorData GetActorData() => null;
+    public virtual int GetAttackPower() => Data.AttackPower;
+
+    public virtual float GetAttackCooldown() => Data.AttackCooltime;
+
+    public virtual float GetAttackRange() => Data.AttackRange;
+
+    public virtual AttackTiming[] GetAttackTimings() => Data.AttackTimings;
+
+    public virtual float GetWalkSpeed() => Data.WalkSpeed;
+
+    public virtual float GetRotationSpeed() => Data.RotSpeed;
+
+    public virtual float GetAcceleration() => Data.Acceleration;
 
     public void ApplySnapshot(ActorSnapshot s)
     {

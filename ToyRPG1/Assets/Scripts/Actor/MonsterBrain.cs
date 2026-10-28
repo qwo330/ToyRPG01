@@ -24,13 +24,13 @@ public class MonsterBrain : MonoBehaviour
     public float RoamRadius => Data != null ? Data.RoamRadius : DefaultRoamRadius;
     public float DetectRadius => Data != null ? Data.DetectRadius : DefaultDetectRadius;
     public float LeashRange => Data != null ? Data.LeashRange : DefaultLeashRange;
-    public float AttackRange => Data != null ? Data.AttackRange : DefaultAttackRange;
+    public float AttackRange => enemy != null ? enemy.GetAttackRange() : DefaultAttackRange;
     public LayerMask TargetLayers => Data != null && Data.TargetLayers.value != 0 ? Data.TargetLayers : DefaultTargetLayerMask;
 
     protected EnemyData Data { get; private set; }
 
     float RoamDelay => Data != null && Data.NextRoamingTime > 0f ? Data.NextRoamingTime : DefaultRoamDelay;
-    float AttackCooldown => Data != null && Data.AttackCooltime > 0f ? Data.AttackCooltime : DefaultAttackCooldown;
+    float AttackCooldown => enemy != null ? enemy.GetAttackCooldown() : DefaultAttackCooldown;
     bool HasMoveTarget => hasMoveTarget;
     bool IsArrived => HasMoveTarget && GetHorizontalSqrDistance(transform.position, targetPosition) <= ArriveThresholdSqr;
 
@@ -60,7 +60,7 @@ public class MonsterBrain : MonoBehaviour
         CacheComponents();
         if (Data == null && enemy != null)
         {
-            Init(enemy.Data);
+            Init(enemy.EnemyData);
         }
         else
         {
@@ -450,7 +450,7 @@ public class MonsterBrain : MonoBehaviour
         if (Data != null)
             return Data;
 
-        return TryGetComponent(out Enemy e) ? e.Data : null;
+        return TryGetComponent(out Enemy e) ? e.EnemyData : null;
     }
 
     Vector3 GetLeashGizmoCenter()

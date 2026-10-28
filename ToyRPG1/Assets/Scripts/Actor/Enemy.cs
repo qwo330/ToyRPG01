@@ -5,9 +5,7 @@ using UnityEngine;
 [RequireComponent(typeof(MonsterBrain))]
 public class Enemy : Actor
 {
-    [SerializeField] EnemyData data;
-
-    public EnemyData Data => data;
+    public EnemyData EnemyData => Data as EnemyData;
 
     MyObjectPool<Enemy> pool;
     Action<Enemy> released;
@@ -19,8 +17,6 @@ public class Enemy : Actor
         EnsureSpawnComponents();
         base.Init();
     }
-
-    protected override ActorData GetActorData() => data;
 
     public void Spawn(Vector3 spawnPoint, Quaternion rotation, MyObjectPool<Enemy> sourcePool, Action<Enemy> onReleased)
     {
@@ -36,7 +32,7 @@ public class Enemy : Actor
 
         if (brain != null)
         {
-            brain.Init(data);
+            brain.Init(EnemyData);
             brain.ResetBrain(spawnPoint);
         }
 

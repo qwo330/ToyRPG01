@@ -11,34 +11,29 @@ public interface IAttack : IAction
 
 public abstract class AttackAction : MonoBehaviour, IAttack
 {
-    const int DefaultAttackPower = 1;
-    
-    [SerializeField] int defaultAttackPower = DefaultAttackPower;
-
     public ActorSnapshot Snapshot { get; private set; }
-    public int AttackPower => Data != null && Data.AttackPower > 0 ? Data.AttackPower : defaultAttackPower;
-    public float AttackCoolTime => Data != null ? Data.AttackCooltime : 0f;
-    public float AttackRange => Data != null ? Data.AttackRange : 0f;
+    public int AttackPower => Actor.GetAttackPower();
+    public float AttackCoolTime => Actor.GetAttackCooldown();
+    public float AttackRange => Actor.GetAttackRange();
 
-    protected Actor Actor
-    {
-        get
-        {
-            if (actor == null)
-                actor = GetComponentInParent<Actor>();
+    protected Actor Actor { get; private set; }
 
-            return actor;
-        }
-    }
-
-    protected ActorData Data { get; private set; }
-
-    Actor actor;
     int processedCombo;
+
+    void Awake()
+    {
+        if (TryGetComponent(out Actor actor))
+        {
+            Actor = actor;
+            return;
+        }
+
+        MyDebug.LogError($"Cannot find Actor component on {gameObject.name}");
+        enabled = false;
+    }
 
     public virtual void Init(ActorData data)
     {
-        Data = data;
     }
 
     public virtual void Apply(ActorSnapshot snapshot)
@@ -48,7 +43,7 @@ public abstract class AttackAction : MonoBehaviour, IAttack
 
     public virtual bool CanProcess()
     {
-        return isActiveAndEnabled && Actor != null && Actor.CanAct;
+        return isActiveAndEnabled && Actor.CanAct;
     }
 
     public virtual void Process()

@@ -18,13 +18,15 @@ public struct ComboAttackState
     bool HasNextCombo => Combo < MaxCombo;
 
     AttackTiming[] timings;
+    float attackCooldown;
     float elapsedTime;
     float recoveryTime;
     bool isNextComboBuffered;
 
-    public void Init(AttackTiming[] attackTimings)
+    public void Init(AttackTiming[] attackTimings, float cooldown)
     {
         timings = attackTimings;
+        attackCooldown = Mathf.Max(0f, cooldown);
         Reset();
     }
 
@@ -60,7 +62,7 @@ public struct ComboAttackState
             return;
         }
 
-        Reset(timing.RecoveryDuration);
+        Reset(Mathf.Max(timing.RecoveryDuration, attackCooldown));
     }
 
     AttackTiming GetTiming(int combo)

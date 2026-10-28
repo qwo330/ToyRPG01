@@ -4,10 +4,7 @@ using UnityEngine;
 public class Player : Actor
 {
     [SerializeField] bool localPlayer;
-    [SerializeField] PlayerData data;
     [SerializeField] MoveController moveController;
-
-    public PlayerData Data => data;
 
     protected override void Init()
     {
@@ -24,8 +21,6 @@ public class Player : Actor
 
         base.Init();
     }
-
-    protected override ActorData GetActorData() => data;
 
     protected override void OnDeathAnimationEnd()
     {

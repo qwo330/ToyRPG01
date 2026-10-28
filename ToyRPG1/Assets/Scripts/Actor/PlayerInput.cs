@@ -18,12 +18,14 @@ public class PlayerInput : MonoBehaviour
             player = p;
             gameObject.TryGetComponent(out scanner);
             ActorManager.Instance.LocalPlayerID = p.EntityID;
-            attackState.Init(player.Data != null ? player.Data.AttackTimings : null);
+            attackState.Init(
+                player.GetAttackTimings(),
+                player.GetAttackCooldown());
         }
         else
         {
             MyDebug.LogError("Cannot find player in scene!");
-            attackState.Init(null);
+            attackState.Init(null, 0f);
         }
     }
 
@@ -168,6 +170,6 @@ public class PlayerInput : MonoBehaviour
     
     bool IsAttackPressed()
     {
-        return Input.GetMouseButtonDown(0);
+        return Input.GetMouseButton(0);
     }
 }
