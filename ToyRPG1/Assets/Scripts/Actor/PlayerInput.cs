@@ -8,12 +8,15 @@ public class PlayerInput : MonoBehaviour
 
     ComboAttackState attackState;
     Player player;
+    ActorScanner scanner;
+    Actor target;
 
     void Start()
     {
         if (gameObject.TryGetComponent<Player>(out var p))
         {
             player = p;
+            gameObject.TryGetComponent(out scanner);
             ActorManager.Instance.LocalPlayerID = p.EntityID;
             attackState.Init(player.Data != null ? player.Data.AttackTimings : null);
         }
@@ -120,9 +123,33 @@ public class PlayerInput : MonoBehaviour
             Priority = priority,
             State = ActorState.Attack,
             MoveDirection = Vector3.zero,
-            LookRotation = transform.rotation,
+            LookRotation = GetAttackLookRotation(),
             SkillID = 0
         };
+    }
+
+    Quaternion GetAttackLookRotation()
+    {
+        if (!attackState.IsAttacking)
+            return transform.rotation;
+
+        var attackTarget = GetAttackTarget();
+        if (attackTarget == null)
+            return transform.rotation;
+
+        var direction = attackTarget.transform.position - transform.position;
+        direction.y = 0f;
+
+        return QuaternionExtensions.SafeLookRotation(direction, transform.rotation);
+    }
+
+    Actor GetAttackTarget()
+    {
+        if (target != null && !target.IsDead)
+            return target;
+
+        target = scanner != null ? scanner.GetTarget() : null;
+        return target;
     }
 
     PlayerInputCommand EvaluateJumpCommand(int priority)

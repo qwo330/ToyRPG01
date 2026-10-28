@@ -48,6 +48,7 @@ GameObject:
   - component: {fileID: 5475447762189581824}
   - component: {fileID: 5278656439086062397}
   - component: {fileID: 6422355477893114301}
+  - component: {fileID: 6758737162077734291}
   m_Layer: 3
   m_Name: Magician
   m_TagString: Player
@@ -192,6 +193,23 @@ MonoBehaviour:
   defaultAttackPower: 1
   projectilePrefab: {fileID: 4365711112982892642, guid: d39f07caa24f6cf44b594176f30afa1b, type: 3}
   firePoint: {fileID: 4981659018673241104}
+--- !u!114 &6758737162077734291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3362591354650287453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27200d8c4d89446aa82fc39bd9903447, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ActorScanner
+  scanRadius: 4
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 64
+  scanMaxCount: 10
 --- !u!1 &6269188950276475047
 GameObject:
   m_ObjectHideFlags: 0
