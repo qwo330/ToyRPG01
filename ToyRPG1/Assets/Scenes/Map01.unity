@@ -148,10 +148,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f99d1ab844dd554bb4b37896c0af3eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spawner
-  msSpawnTime: 5000
-  spawnMaxCount: 3
-  spawnRadius: 5
   actorPrefab: {fileID: 1910162336494697736, guid: f7adbb8badc6deb4c8fb0d895e7d2880, type: 3}
+  spawnMaxCount: 3
+  msSpawnTime: 5000
+  spawnRadius: 5
 --- !u!4 &25920291
 Transform:
   m_ObjectHideFlags: 0
@@ -196,10 +196,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f99d1ab844dd554bb4b37896c0af3eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spawner
-  msSpawnTime: 5000
-  spawnMaxCount: 1
-  spawnRadius: 1.5
   actorPrefab: {fileID: 1910162336494697736, guid: f7adbb8badc6deb4c8fb0d895e7d2880, type: 3}
+  spawnMaxCount: 1
+  msSpawnTime: 5000
+  spawnRadius: 1.5
 --- !u!4 &466443784
 Transform:
   m_ObjectHideFlags: 0
@@ -281,7 +281,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 2f7161e73cd54968875dc48e2bc2f863, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
