@@ -3,11 +3,31 @@ using UnityEngine;
 public class ProjectileAttackAction : AttackAction
 {
     [SerializeField] Projectile projectilePrefab;
-    [SerializeField] Transform firePoint;
+    [SerializeField] Transform attackPoint;
 
     MyObjectPool<Projectile> projectilePool;
     int pendingAttackCount;
-    bool didLogMissingPrefab;
+
+    protected override void Awake()
+    {
+        base.Awake();
+
+        if (!enabled)
+            return;
+
+        if (projectilePrefab == null)
+        {
+            MyDebug.LogError($"Projectile prefab is not set on {gameObject.name}");
+            enabled = false;
+            return;
+        }
+
+        if (attackPoint == null)
+        {
+            MyDebug.LogError($"AttackPoint is not set on {gameObject.name}");
+            enabled = false;
+        }
+    }
 
     public override void Init(ActorData data)
     {
@@ -26,11 +46,10 @@ public class ProjectileAttackAction : AttackAction
         if (projectile == null)
             return;
 
-        var origin = firePoint != null ? firePoint : transform;
         var direction = GetFireDirection();
 
         projectile.Pool = projectilePool;
-        projectile.transform.SetPositionAndRotation(origin.position, GetProjectileRotation(direction));
+        projectile.transform.SetPositionAndRotation(attackPoint.position, GetProjectileRotation(direction));
         projectile.Play(direction, AttackPower, Actor);
     }
 
@@ -55,17 +74,6 @@ public class ProjectileAttackAction : AttackAction
     {
         if (projectilePool != null)
             return;
-
-        if (projectilePrefab == null)
-        {
-            if (!didLogMissingPrefab)
-            {
-                MyDebug.LogError($"Projectile prefab is not set on {gameObject.name}");
-                didLogMissingPrefab = true;
-            }
-
-            return;
-        }
 
         projectilePool = new MyObjectPool<Projectile>(projectilePrefab);
     }

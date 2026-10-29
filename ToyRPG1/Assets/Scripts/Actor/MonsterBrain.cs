@@ -12,26 +12,19 @@ public enum MonsterAIState
 
 public class MonsterBrain : MonoBehaviour
 {
-    const float DefaultRoamRadius = 5f;
-    const float DefaultDetectRadius = 10f;
-    const float DefaultLeashRange = 15f;
-    const float DefaultAttackRange = 1f;
-    const float DefaultRoamDelay = 0.5f;
-    const float DefaultAttackCooldown = 1f;
     const float ArriveThresholdSqr = 0.04f; // 0.2f * 0.2f
-    const int DefaultTargetLayerMask = GameLayers.PlayerMask;
     const int BasicAttackSkillID = 0;
 
-    public float RoamRadius => Data != null ? Data.RoamRadius : DefaultRoamRadius;
-    public float DetectRadius => Data != null ? Data.DetectRadius : DefaultDetectRadius;
-    public float LeashRange => Data != null ? Data.LeashRange : DefaultLeashRange;
-    public float AttackRange => enemy != null ? enemy.GetAttackRange() : DefaultAttackRange;
-    public LayerMask TargetLayers => Data != null && Data.TargetLayers.value != 0 ? Data.TargetLayers : DefaultTargetLayerMask;
+    public float RoamRadius => Data.RoamRadius;
+    public float DetectRadius => Data.DetectRadius;
+    public float LeashRange => Data.LeashRange;
+    public float AttackRange => enemy.GetAttackRange();
+    public LayerMask TargetLayers => Data.TargetLayers;
 
     protected EnemyData Data { get; private set; }
 
-    float RoamDelay => Data != null && Data.NextRoamingTime > 0f ? Data.NextRoamingTime : DefaultRoamDelay;
-    float AttackCooldown => enemy != null ? enemy.GetAttackCooldown() : DefaultAttackCooldown;
+    float RoamDelay => Data.NextRoamingTime;
+    float AttackCooldown => enemy.GetAttackCooldown();
     bool HasMoveTarget => hasMoveTarget;
     bool IsArrived => HasMoveTarget && GetHorizontalSqrDistance(transform.position, targetPosition) <= ArriveThresholdSqr;
 
@@ -60,13 +53,19 @@ public class MonsterBrain : MonoBehaviour
     void Start()
     {
         CacheComponents();
-        if (Data == null && enemy != null)
+
+        if (enemy == null)
         {
-            Init(enemy.EnemyData);
+            MyDebug.LogError($"Cannot find Enemy component on {gameObject.name}");
+            enabled = false;
+            return;
         }
-        else
+
+        Init(enemy.EnemyData);
+        if (!isReady)
         {
-            ConfigureScanner();
+            enabled = false;
+            return;
         }
 
         ResetBrain(transform.position);
@@ -87,11 +86,26 @@ public class MonsterBrain : MonoBehaviour
     {
         CacheComponents();
 
-        if (data is EnemyData e)
+        if (data is not EnemyData enemyData)
         {
-            Data = e;
-            ConfigureScanner();
+            MyDebug.LogError($"EnemyData is not set on {gameObject.name}");
+            enabled = false;
+            isReady = false;
+            return;
         }
+
+        Data = enemyData;
+
+        if (scanner == null)
+        {
+            MyDebug.LogError($"Cannot find ActorScanner component on {gameObject.name}");
+            enabled = false;
+            isReady = false;
+            return;
+        }
+
+        ConfigureScanner();
+        isReady = true;
     }
 
     public void ResetBrain(Vector3 pos)
@@ -115,14 +129,11 @@ public class MonsterBrain : MonoBehaviour
         if (scanner == null)
             scanner = gameObject.GetComponent<ActorScanner>();
 
-        isReady = enemy != null;
+        isReady = enemy != null && scanner != null && Data != null;
     }
 
     void ConfigureScanner()
     {
-        if (scanner == null)
-            return;
-
         scanner.Configure(DetectRadius, TargetLayers);
     }
 
@@ -439,9 +450,12 @@ public class MonsterBrain : MonoBehaviour
     void OnDrawGizmos()
     {
         var data = GetGizmoData();
-        var attackRange = data != null ? data.AttackRange : DefaultAttackRange;
-        var detectRadius = data != null ? data.DetectRadius : DefaultDetectRadius;
-        var leashRange = data != null ? data.LeashRange : DefaultLeashRange;
+        if (data == null)
+            return;
+
+        var attackRange = data.AttackRange;
+        var detectRadius = data.DetectRadius;
+        var leashRange = data.LeashRange;
 
         DrawRangeGizmo(GetLeashGizmoCenter(), leashRange, LeashRangeGizmoColor);
         DrawRangeGizmo(detectRadius, DetectRangeGizmoColor);

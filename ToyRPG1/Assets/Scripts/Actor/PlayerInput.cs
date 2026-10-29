@@ -19,7 +19,14 @@ public class PlayerInput : MonoBehaviour
         if (gameObject.TryGetComponent<Player>(out var p))
         {
             player = p;
-            gameObject.TryGetComponent(out scanner);
+
+            if (!gameObject.TryGetComponent(out scanner))
+            {
+                MyDebug.LogError($"Cannot find ActorScanner component on {gameObject.name}");
+                enabled = false;
+                return;
+            }
+
             ActorManager.Instance.LocalPlayerID = p.EntityID;
             attackState.Init(
                 player.GetAttackTimings(),
@@ -28,7 +35,7 @@ public class PlayerInput : MonoBehaviour
         else
         {
             MyDebug.LogError("Cannot find player in scene!");
-            attackState.Init(null, 0f);
+            enabled = false;
         }
     }
 
@@ -165,7 +172,7 @@ public class PlayerInput : MonoBehaviour
         if (target != null && !target.IsDead)
             return target;
 
-        target = scanner != null ? scanner.GetTarget() : null;
+        target = scanner.GetTarget();
         return target;
     }
 

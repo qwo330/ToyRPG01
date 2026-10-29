@@ -191,7 +191,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectileAttackAction
   projectilePrefab: {fileID: 4365711112982892642, guid: d39f07caa24f6cf44b594176f30afa1b, type: 3}
-  firePoint: {fileID: 4981659018673241104}
+  attackPoint: {fileID: 4981659018673241104}
 --- !u!114 &6758737162077734291
 MonoBehaviour:
   m_ObjectHideFlags: 0
