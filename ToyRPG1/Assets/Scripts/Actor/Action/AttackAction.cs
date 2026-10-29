@@ -22,7 +22,7 @@ public abstract class AttackAction : MonoBehaviour, IAttack, ISkillCommandHandle
     readonly Queue<SkillCommand> pendingCommands = new();
     uint lastHandledSequence;
 
-    void Awake()
+    protected virtual void Awake()
     {
         if (TryGetComponent(out Actor actor))
         {
