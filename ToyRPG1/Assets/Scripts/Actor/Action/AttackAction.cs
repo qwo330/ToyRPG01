@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public interface IAttack : IAction
@@ -9,7 +10,7 @@ public interface IAttack : IAction
     void OnNormalAttackEvent();
 }
 
-public abstract class AttackAction : MonoBehaviour, IAttack
+public abstract class AttackAction : MonoBehaviour, IAttack, ISkillCommandHandler
 {
     public ActorSnapshot Snapshot { get; private set; }
     public int AttackPower => Actor.GetAttackPower();
@@ -18,7 +19,8 @@ public abstract class AttackAction : MonoBehaviour, IAttack
 
     protected Actor Actor { get; private set; }
 
-    int processedCombo;
+    readonly Queue<SkillCommand> pendingCommands = new();
+    uint lastHandledSequence;
 
     void Awake()
     {
@@ -30,6 +32,12 @@ public abstract class AttackAction : MonoBehaviour, IAttack
 
         MyDebug.LogError($"Cannot find Actor component on {gameObject.name}");
         enabled = false;
+    }
+
+    protected virtual void OnDisable()
+    {
+        pendingCommands.Clear();
+        ResetAttack();
     }
 
     public virtual void Init(ActorData data)
@@ -48,22 +56,29 @@ public abstract class AttackAction : MonoBehaviour, IAttack
 
     public virtual void Process()
     {
-        if (!CanProcess() || !IsAttackSnapshot(Snapshot))
-        {
-            ResetAttack();
-            return;
-        }
-
-        if (processedCombo == Snapshot.Combo)
+        if (!CanProcess())
             return;
 
-        processedCombo = Snapshot.Combo;
-        ExecuteAttack(Snapshot);
+        while (pendingCommands.Count > 0)
+            ExecuteAttack(pendingCommands.Dequeue());
+    }
+
+    public void HandleSkillCommand(SkillCommand command)
+    {
+        if (command.Sequence <= lastHandledSequence)
+            return;
+
+        lastHandledSequence = command.Sequence;
+        pendingCommands.Enqueue(command);
     }
 
     public abstract void OnNormalAttackEvent();
 
-    protected abstract void ExecuteAttack(ActorSnapshot snapshot);
+    protected abstract void ExecuteAttack(SkillCommand command);
+
+    protected virtual void ResetAttack()
+    {
+    }
 
     protected virtual Vector3 GetFireDirection()
     {
@@ -79,15 +94,5 @@ public abstract class AttackAction : MonoBehaviour, IAttack
     protected virtual Quaternion GetProjectileRotation(Vector3 direction)
     {
         return Quaternion.FromToRotation(Vector3.up, direction);
-    }
-
-    protected virtual bool IsAttackSnapshot(ActorSnapshot snapshot)
-    {
-        return snapshot.State == ActorState.Attack && snapshot.Combo > 0;
-    }
-
-    protected virtual void ResetAttack()
-    {
-        processedCombo = 0;
     }
 }

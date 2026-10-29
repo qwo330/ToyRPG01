@@ -28,6 +28,7 @@ public abstract class Actor : MonoBehaviour
     protected bool IsDeathFinalized { get; private set; }
 
     readonly List<IAction> actions = new();
+    readonly List<ISkillCommandHandler> skillCommandHandlers = new();
     readonly Dictionary<GameObject, int> originalLayers = new();
     readonly Subject<ActorSpawnEvent> spawnedSubject = new();
     readonly Subject<ActorDespawnEvent> despawnedSubject = new();
@@ -92,6 +93,9 @@ public abstract class Actor : MonoBehaviour
         actions.Clear();
         actions.AddRange(gameObject.GetComponents<IAction>());
 
+        skillCommandHandlers.Clear();
+        skillCommandHandlers.AddRange(gameObject.GetComponents<ISkillCommandHandler>());
+
         MaxHP = Data.MaxHP;
         HP = MaxHP;
 
@@ -153,6 +157,14 @@ public abstract class Actor : MonoBehaviour
         foreach (var action in actions)
         {
             action.Process();
+        }
+    }
+
+    public void ApplySkillCommand(SkillCommand command)
+    {
+        foreach (var handler in skillCommandHandlers)
+        {
+            handler.HandleSkillCommand(command);
         }
     }
 
@@ -324,9 +336,6 @@ struct Command
 
     public Vector3 MoveDirection;
     public Quaternion LookRotation;
-
-    public int TargetID;
-    public int SkillID;
 
     public static Command Idle(Actor actor)
     {

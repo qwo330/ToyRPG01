@@ -20,6 +20,7 @@ public class MonsterBrain : MonoBehaviour
     const float DefaultAttackCooldown = 1f;
     const float ArriveThresholdSqr = 0.04f; // 0.2f * 0.2f
     const int DefaultTargetLayerMask = GameLayers.PlayerMask;
+    const int BasicAttackSkillID = 0;
 
     public float RoamRadius => Data != null ? Data.RoamRadius : DefaultRoamRadius;
     public float DetectRadius => Data != null ? Data.DetectRadius : DefaultDetectRadius;
@@ -49,6 +50,7 @@ public class MonsterBrain : MonoBehaviour
 
     float nextRoamTime;
     float nextAttackTime;
+    uint nextSkillSequence;
 
     void Awake()
     {
@@ -346,12 +348,21 @@ public class MonsterBrain : MonoBehaviour
         {
             State = ActorState.Attack,
             MoveDirection = transform.position,
-            LookRotation = QuaternionExtensions.SafeLookRotation(dir, transform.rotation),
-            TargetID = target.EntityID,
-            SkillID = 0
+            LookRotation = QuaternionExtensions.SafeLookRotation(dir, transform.rotation)
         };
 
         SendCommandIfChanged(command, force);
+        ActorManager.Instance.AddSkillCommand(new SkillCommand
+        {
+            SourceID = enemy.EntityID,
+            Sequence = ++nextSkillSequence,
+            SkillID = BasicAttackSkillID,
+            Target = new SkillTarget
+            {
+                Type = SkillTargetType.Actor,
+                ActorID = target.EntityID
+            }
+        });
         nextAttackTime = Time.time + AttackCooldown;
     }
 
@@ -369,9 +380,7 @@ public class MonsterBrain : MonoBehaviour
             DataIndex = nextIndex,
             Position = command.MoveDirection,
             Rotation = command.LookRotation,
-            State = command.State,
-            TargetID = command.TargetID,
-            SkillID = command.SkillID
+            State = command.State
         };
 
         ActorManager.Instance.AddSnapshot(snapshot);
@@ -381,12 +390,6 @@ public class MonsterBrain : MonoBehaviour
     bool ShouldSend(Command command)
     {
         if (command.State != lastCommand.State)
-            return true;
-
-        if (command.TargetID != lastCommand.TargetID)
-            return true;
-
-        if (command.SkillID != lastCommand.SkillID)
             return true;
 
         if (GetHorizontalSqrDistance(command.MoveDirection, lastCommand.MoveDirection) > GlobalValues.HMoveThresholdSqr)

@@ -19,9 +19,6 @@ public struct ActorSnapshot
     public Quaternion Rotation;
     public ActorState State;
     public int Combo;
-    
-    public int TargetID;
-    public int SkillID;
 }
 
 // public static class ActionExtensions

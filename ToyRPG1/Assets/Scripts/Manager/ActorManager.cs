@@ -4,6 +4,7 @@ public class ActorManager : SingletonMono<ActorManager>
 {
     readonly Dictionary<int, Actor> entities = new();
     readonly List<ActorSnapshot> buffers = new();
+    readonly List<SkillCommand> skillCommands = new();
 
     public int LocalPlayerID;
     
@@ -18,6 +19,16 @@ public class ActorManager : SingletonMono<ActorManager>
         }
         
         buffers.Clear();
+
+        foreach (var command in skillCommands)
+        {
+            if (entities.TryGetValue(command.SourceID, out var actor))
+            {
+                actor.ApplySkillCommand(command);
+            }
+        }
+
+        skillCommands.Clear();
 
         foreach (var actor in entities.Values)
         {
@@ -65,6 +76,18 @@ public class ActorManager : SingletonMono<ActorManager>
         }
 
         buffers.Add(s);
+        return true;
+    }
+
+    public bool AddSkillCommand(SkillCommand command)
+    {
+        if (entities.ContainsKey(command.SourceID) == false)
+        {
+            MyDebug.LogWarning($"Cannot find entity ID: {command.SourceID}");
+            return false;
+        }
+
+        skillCommands.Add(command);
         return true;
     }
 }

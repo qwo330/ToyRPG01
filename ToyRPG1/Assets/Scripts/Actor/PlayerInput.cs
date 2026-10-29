@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class PlayerInput : MonoBehaviour
 {
+    const int BasicAttackSkillID = 0;
+
     Camera Cam => Camera.main;
     bool IsAttacking => attackState.IsAttacking;
 
@@ -10,6 +12,7 @@ public class PlayerInput : MonoBehaviour
     Player player;
     ActorScanner scanner;
     Actor target;
+    uint nextSkillSequence;
 
     void Start()
     {
@@ -72,12 +75,25 @@ public class PlayerInput : MonoBehaviour
             Position = snapshotPosition,
             Rotation = finalCommand.LookRotation,
             State = finalCommand.State,
-            Combo = attackState.Combo,
-            TargetID = finalCommand.TargetID,
-            SkillID = finalCommand.SkillID
+            Combo = attackState.Combo
         };
         
         ActorManager.Instance.AddSnapshot(s);
+
+        if (attackState.IsComboStartedThisTick)
+        {
+            ActorManager.Instance.AddSkillCommand(new SkillCommand
+            {
+                SourceID = player.EntityID,
+                Sequence = ++nextSkillSequence,
+                SkillID = BasicAttackSkillID,
+                ComboIndex = attackState.Combo,
+                Target = new SkillTarget
+                {
+                    Type = SkillTargetType.None
+                }
+            });
+        }
     }
 
     PlayerInputCommand EvaluateMoveCommand(int priority)
@@ -125,8 +141,7 @@ public class PlayerInput : MonoBehaviour
             Priority = priority,
             State = ActorState.Attack,
             MoveDirection = Vector3.zero,
-            LookRotation = GetAttackLookRotation(),
-            SkillID = 0
+            LookRotation = GetAttackLookRotation()
         };
     }
 

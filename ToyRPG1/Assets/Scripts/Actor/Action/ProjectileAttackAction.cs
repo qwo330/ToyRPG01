@@ -6,6 +6,7 @@ public class ProjectileAttackAction : AttackAction
     [SerializeField] Transform firePoint;
 
     MyObjectPool<Projectile> projectilePool;
+    int pendingAttackCount;
     bool didLogMissingPrefab;
 
     public override void Init(ActorData data)
@@ -16,8 +17,10 @@ public class ProjectileAttackAction : AttackAction
 
     public override void OnNormalAttackEvent()
     {
-        if (!CanProcess())
+        if (!CanProcess() || pendingAttackCount <= 0)
             return;
+
+        pendingAttackCount--;
 
         var projectile = GetProjectile();
         if (projectile == null)
@@ -31,9 +34,15 @@ public class ProjectileAttackAction : AttackAction
         projectile.Play(direction, AttackPower, Actor);
     }
 
-    protected override void ExecuteAttack(ActorSnapshot snapshot)
+    protected override void ExecuteAttack(SkillCommand command)
     {
         // 투사체 발사는 OnNormalAttackEvent 애니메이션 이벤트에서 처리한다.
+        pendingAttackCount++;
+    }
+
+    protected override void ResetAttack()
+    {
+        pendingAttackCount = 0;
     }
 
     Projectile GetProjectile()
