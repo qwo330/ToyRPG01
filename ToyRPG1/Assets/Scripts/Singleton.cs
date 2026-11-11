@@ -57,9 +57,11 @@ public class SingletonMono<T> : MonoBehaviour where T : MonoBehaviour
     static readonly object @lock = new ();
     static bool applicationIsQuitting = false;
 
+    bool isInitialized;
+
     void Awake()
     {
-        applicationIsQuitting = false;
+        InitializeSingleton();
     }
 
     public static T Instance
@@ -80,25 +82,15 @@ public class SingletonMono<T> : MonoBehaviour where T : MonoBehaviour
                 {
                     instance = FindFirstObjectByType<T>();
 
-                    if (FindObjectsByType<T>(FindObjectsSortMode.None).Length > 1)
-                    {
-                        MyDebug.LogError("[Singleton] Something went really wrong " +
-                            " - there should never be more than 1 singleton!" +
-                            " Reopening the scene might fix it.");
-                        return instance;
-                    }
-
                     if (instance == null)
                     {
                         GameObject singleton = new GameObject($"(singleton) {typeof(T)}");
                         instance = singleton.AddComponent<T>();
-
-                        DontDestroyOnLoad(singleton);
                     }
 
                     if (instance is SingletonMono<T> s)
                     {
-                        s.Init();
+                        s.InitializeSingleton();
                     }
                 }
 
@@ -120,5 +112,24 @@ public class SingletonMono<T> : MonoBehaviour where T : MonoBehaviour
     public virtual void Reset()
     {
         
+    }
+
+    void InitializeSingleton()
+    {
+        if (instance != null && instance != this)
+        {
+            gameObject.SetActive(false);
+            Destroy(gameObject);
+            return;
+        }
+
+        if (isInitialized)
+            return;
+
+        instance = this as T;
+        applicationIsQuitting = false;
+        DontDestroyOnLoad(gameObject);
+        isInitialized = true;
+        Init();
     }
 }
