@@ -1,5 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using R3;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : SingletonMono<GameManager>
 {
@@ -15,6 +20,9 @@ public class GameManager : SingletonMono<GameManager>
     }
 
     List<Spawner> spawnerList = new();
+    IDisposable playerDeathSubscription;
+    int startedSceneHandle = -1;
+    bool isGameOver;
     
     public bool HasMapData(int x, int z) => heightMapData.ContainsKey((x, z));
     
@@ -50,8 +58,119 @@ public class GameManager : SingletonMono<GameManager>
 
     void Start()
     {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        StartScene(SceneManager.GetActiveScene());
+    }
+
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        playerDeathSubscription?.Dispose();
+        playerDeathSubscription = null;
+    }
+
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (mode == LoadSceneMode.Single)
+            StartScene(scene);
+    }
+
+    void StartScene(Scene scene)
+    {
+        if (startedSceneHandle == scene.handle)
+            return;
+
+        startedSceneHandle = scene.handle;
         currentState = EGameState.None;
+        StartSceneAsync(destroyCancellationToken).Forget();
+    }
+
+    async UniTask StartSceneAsync(CancellationToken cancellationToken)
+    {
+        // PlayerInput.Start와 스포너 등록이 끝난 뒤 플레이어를 연결한다.
+        await UniTask.NextFrame(cancellationToken: cancellationToken);
+        var player = ActorManager.Instance.GetLocalPlayer();
+        if (player == null)
+        {
+            MyDebug.LogError("Cannot start game: local player is not registered.");
+            return;
+        }
+
+        playerDeathSubscription?.Dispose();
+        playerDeathSubscription = player.OnDead.Subscribe(_ => GameOver());
+        isGameOver = false;
         GameStart();
+    }
+
+    public void GameOver()
+    {
+        if (isGameOver || !IsPlaying)
+            return;
+
+        isGameOver = true;
+        currentState = EGameState.Stop;
+        GameOverAsync(destroyCancellationToken).Forget();
+    }
+
+    async UniTask GameOverAsync(CancellationToken cancellationToken)
+    {
+        var scenePath = SceneManager.GetActiveScene().path;
+        var cleanupTasks = new (string Name, Func<CancellationToken, UniTask> ExecuteAsync)[]
+        {
+            ("Return spawned monsters", ReturnSpawnedActorsAsync),
+            ("Reset actor commands", ResetActorCommandsAsync),
+            ("Clear scene registrations", ClearSceneRegistrationsAsync)
+        };
+
+        string currentTask = "Wait for actor processing";
+        try
+        {
+            await UniTask.NextFrame(cancellationToken: cancellationToken);
+            foreach (var task in cleanupTasks)
+            {
+                currentTask = task.Name;
+                cancellationToken.ThrowIfCancellationRequested();
+                await task.ExecuteAsync(cancellationToken);
+            }
+
+            currentTask = "Reload scene";
+#if UNITY_EDITOR
+            await UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(
+                scenePath, new LoadSceneParameters(LoadSceneMode.Single));
+#else
+            await SceneManager.LoadSceneAsync(scenePath, LoadSceneMode.Single);
+#endif
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            MyDebug.LogError($"Game over failed at '{currentTask}': {exception}");
+        }
+    }
+
+    async UniTask ReturnSpawnedActorsAsync(CancellationToken cancellationToken)
+    {
+        foreach (var spawner in spawnerList)
+        {
+            if (spawner != null)
+                await spawner.StopAndReturnActorsAsync(cancellationToken);
+        }
+    }
+
+    UniTask ResetActorCommandsAsync(CancellationToken cancellationToken)
+    {
+        ResetManagers();
+        return UniTask.CompletedTask;
+    }
+
+    UniTask ClearSceneRegistrationsAsync(CancellationToken cancellationToken)
+    {
+        playerDeathSubscription?.Dispose();
+        playerDeathSubscription = null;
+        spawnerList.Clear();
+        return UniTask.CompletedTask;
     }
 
     void Update()

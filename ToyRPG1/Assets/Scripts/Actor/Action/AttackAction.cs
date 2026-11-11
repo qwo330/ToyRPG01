@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using R3;
 using UnityEngine;
 
 public interface IAttack : IAction
@@ -34,14 +35,9 @@ public abstract class AttackAction : MonoBehaviour, IAttack, ISkillCommandHandle
         enabled = false;
     }
 
-    protected virtual void OnDisable()
-    {
-        pendingCommands.Clear();
-        ResetAttack();
-    }
-
     public virtual void Init(ActorData data)
     {
+        Actor.OnDespawned.Subscribe(_ => ClearAttackState()).AddTo(this);
     }
 
     public virtual void Apply(ActorSnapshot snapshot)
@@ -78,6 +74,12 @@ public abstract class AttackAction : MonoBehaviour, IAttack, ISkillCommandHandle
 
     protected virtual void ResetAttack()
     {
+    }
+
+    void ClearAttackState()
+    {
+        pendingCommands.Clear();
+        ResetAttack();
     }
 
     protected virtual Vector3 GetFireDirection()

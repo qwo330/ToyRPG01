@@ -14,7 +14,8 @@ public abstract class Actor : MonoBehaviour
     public ActorData Data => data;
     public ActorSnapshot Snapshot { get; private set; }
     public bool IsDead { get; private set; }
-    public virtual bool CanAct => isActiveAndEnabled && !IsDead;
+    public bool IsSpawned { get; private set; }
+    public virtual bool CanAct => IsSpawned && isActiveAndEnabled && !IsDead;
 
     public Observable<ActorSpawnEvent> OnSpawned => spawnedSubject;
     public Observable<ActorDespawnEvent> OnDespawned => despawnedSubject;
@@ -24,7 +25,6 @@ public abstract class Actor : MonoBehaviour
     public Observable<ActorSnapshot> OnSnapshotChanged => snapshotChangedSubject;
 
     protected bool IsInitialized { get; private set; }
-    protected bool IsSpawned { get; private set; }
     protected bool IsDeathFinalized { get; private set; }
 
     readonly List<IAction> actions = new();
@@ -48,28 +48,9 @@ public abstract class Actor : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    void Start()
-    {
-        InitializeIfNeeded();
-        PublishSpawned();
-    }
-
-    void OnEnable()
-    {
-        if (IsInitialized)
-            ActorManager.Instance.AddActor(this);
-    }
-
-    void OnDisable()
-    {
-        if (IsInitialized)
-            ActorManager.Instance?.RemoveActor(this);
-
-        PublishDespawned();
-    }
-
     void OnDestroy()
     {
+        DespawnCore();
         spawnedSubject.Dispose();
         despawnedSubject.Dispose();
         hitSubject.Dispose();
@@ -108,7 +89,6 @@ public abstract class Actor : MonoBehaviour
         
         EntityID = gameObject.GetInstanceID();
         ResetActorSnapshot();
-        ActorManager.Instance.AddActor(this);
 
         if (TryGetComponent(out actorAnimator))
         {
@@ -241,20 +221,40 @@ public abstract class Actor : MonoBehaviour
 
     protected void ResetHealth()
     {
+        var previousHP = HP;
         RestoreLayers();
         HP = MaxHP;
         IsDead = false;
         IsDeathFinalized = false;
-        PublishHealthChanged(null, HP, HP);
+        PublishHealthChanged(null, previousHP, HP);
     }
 
-    protected void PublishSpawned()
+    public virtual void Spawn()
     {
         if (IsSpawned)
             return;
 
+        InitializeIfNeeded();
+        ResetHealth();
+        ResetActorSnapshot();
         IsSpawned = true;
+        ActorManager.Instance.AddActor(this);
         spawnedSubject.OnNext(new ActorSpawnEvent(this, transform.position, transform.rotation, Snapshot));
+    }
+
+    public virtual void Despawn()
+    {
+        DespawnCore();
+    }
+
+    void DespawnCore()
+    {
+        if (!IsSpawned)
+            return;
+
+        IsSpawned = false;
+        ActorManager.Instance?.RemoveActor(this);
+        despawnedSubject.OnNext(new ActorDespawnEvent(this, Snapshot));
     }
 
     bool TryDead(Actor attacker, int previousHP, int damage)
@@ -264,6 +264,7 @@ public abstract class Actor : MonoBehaviour
 
         IsDead = true;
         IsDeathFinalized = false;
+        ActorManager.Instance.RemoveActor(this);
         SetDeathLayer();
         ResetActorSnapshot(ActorState.Dead);
         deadSubject.OnNext(new ActorDeadEvent(this, attacker, damage, previousHP, HP, MaxHP));
@@ -303,15 +304,6 @@ public abstract class Actor : MonoBehaviour
         }
 
         originalLayers.Clear();
-    }
-
-    void PublishDespawned()
-    {
-        if (!IsSpawned)
-            return;
-
-        IsSpawned = false;
-        despawnedSubject.OnNext(new ActorDespawnEvent(this, Snapshot));
     }
 
     void PublishHealthChanged(Actor source, int previousHP, int currentHP)

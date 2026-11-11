@@ -35,6 +35,7 @@ public class Spawner : MonoBehaviour
     MyObjectPool<Enemy> actorPool;
     CancellationTokenSource spawnCancellation;
     bool isSpawning;
+    UniTask spawnTask;
 
 #if UNITY_EDITOR
     int nameIndex;
@@ -80,6 +81,22 @@ public class Spawner : MonoBehaviour
         PlaySpawner();
     }
 
+    public async UniTask StopAndReturnActorsAsync(CancellationToken cancellationToken)
+    {
+        StopSpawner();
+        await spawnTask;
+        cancellationToken.ThrowIfCancellationRequested();
+
+        for (var i = spawnedActors.Count - 1; i >= 0; i--)
+        {
+            var actor = spawnedActors[i];
+            if (actor != null)
+                actor.ReturnToPool();
+        }
+
+        spawnedActors.Clear();
+    }
+
     MyObjectPool<Enemy> CreatePool()
     {
         if (actorPrefab != null)
@@ -105,7 +122,8 @@ public class Spawner : MonoBehaviour
         spawnCancellation = new CancellationTokenSource();
         isSpawning = true;
 
-        StartSpawn(spawnCancellation.Token).Forget();
+        spawnTask = StartSpawn(spawnCancellation.Token).Preserve();
+        spawnTask.Forget();
     }
 
     void StopSpawner()
@@ -119,7 +137,7 @@ public class Spawner : MonoBehaviour
         isSpawning = false;
     }
 
-    async UniTaskVoid StartSpawn(CancellationToken token)
+    async UniTask StartSpawn(CancellationToken token)
     {
         try
         {
@@ -138,15 +156,20 @@ public class Spawner : MonoBehaviour
         }
         finally
         {
-            isSpawning = false;
+            if (spawnCancellation != null && spawnCancellation.Token == token)
+                isSpawning = false;
         }
     }
 
     void TrySpawn()
     {
-        RemoveReleasedActors();
         if (spawnedActors.Count >= spawnMaxCount)
-            return;
+        {
+            RemoveReleasedActors();
+
+            if (spawnedActors.Count >= spawnMaxCount)
+                return;
+        }
 
         var actor = actorPool.Get();
         if (actor == null)
@@ -172,7 +195,7 @@ public class Spawner : MonoBehaviour
 
     void RemoveReleasedActors()
     {
-        spawnedActors.RemoveAll(actor => actor.IsNullOrDestroyed() || !actor.gameObject.activeSelf);
+        spawnedActors.RemoveAll(actor => actor.IsNullOrDestroyed() || !actor.IsSpawned);
     }
 
     Vector3 GetSpawnPoint()

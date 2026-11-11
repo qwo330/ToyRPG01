@@ -1,4 +1,5 @@
 using System;
+using R3;
 using UnityEngine;
 
 public class PlayerInput : MonoBehaviour
@@ -27,16 +28,21 @@ public class PlayerInput : MonoBehaviour
                 return;
             }
 
-            ActorManager.Instance.LocalPlayerID = p.EntityID;
-            attackState.Init(
-                player.GetAttackTimings(),
-                player.GetAttackCooldown());
+            player.OnSpawned.Subscribe(_ => ResetInputState()).AddTo(this);
+            ResetInputState();
         }
         else
         {
             MyDebug.LogError("Cannot find player in scene!");
             enabled = false;
         }
+    }
+
+    void ResetInputState()
+    {
+        attackState = default;
+        attackState.Init(player.GetAttackTimings(), player.GetAttackCooldown());
+        target = null;
     }
 
     void Update()

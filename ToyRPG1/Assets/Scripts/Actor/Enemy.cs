@@ -20,6 +20,9 @@ public class Enemy : Actor
 
     public void Spawn(Vector3 spawnPoint, Quaternion rotation, MyObjectPool<Enemy> sourcePool, Action<Enemy> onReleased)
     {
+        if (IsSpawned)
+            return;
+
         EnsureSpawnComponents();
         transform.SetPositionAndRotation(spawnPoint, rotation);
         InitializeIfNeeded();
@@ -27,16 +30,13 @@ public class Enemy : Actor
         pool = sourcePool;
         released = onReleased;
 
-        ResetHealth();
-        ResetActorSnapshot(spawnPoint, rotation);
-
         if (brain != null)
         {
             brain.Init(EnemyData);
             brain.ResetBrain(spawnPoint);
         }
 
-        PublishSpawned();
+        base.Spawn();
     }
 
     protected override void OnDeathAnimationEnd()
@@ -44,8 +44,12 @@ public class Enemy : Actor
         ReturnToPool();
     }
 
-    void ReturnToPool()
+    public override void Despawn()
     {
+        if (!IsSpawned)
+            return;
+
+        base.Despawn();
         released?.Invoke(this);
         released = null;
 
@@ -56,6 +60,11 @@ public class Enemy : Actor
         }
 
         pool.Release(this);
+    }
+
+    public void ReturnToPool()
+    {
+        Despawn();
     }
 
     void EnsureSpawnComponents()

@@ -6,6 +6,17 @@ public class Player : Actor
     [SerializeField] bool localPlayer;
     [SerializeField] MoveController moveController;
 
+    void Start()
+    {
+        Spawn();
+    }
+
+    public override void Spawn()
+    {
+        base.Spawn();
+        ActorManager.Instance.LocalPlayerID = EntityID;
+    }
+
     protected override void Init()
     {
         if (!TryGetComponent<AttackAction>(out _))
@@ -24,6 +35,7 @@ public class Player : Actor
 
     protected override void OnDeathAnimationEnd()
     {
+        Despawn();
         gameObject.SetActive(false);
     }
 }

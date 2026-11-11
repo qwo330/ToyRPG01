@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine.Pool;
 
 public class ActorManager : SingletonMono<ActorManager>
 {
@@ -30,10 +31,22 @@ public class ActorManager : SingletonMono<ActorManager>
 
         skillCommands.Clear();
 
-        foreach (var actor in entities.Values)
+        using (ListPool<Actor>.Get(out var processingActors))
         {
-            actor.ProcessActions();
+            processingActors.AddRange(entities.Values);
+            foreach (var actor in processingActors)
+            {
+                if (actor != null && entities.ContainsKey(actor.EntityID))
+                    actor.ProcessActions();
+            }
         }
+    }
+
+    public override void Reset()
+    {
+        buffers.Clear();
+        skillCommands.Clear();
+        LocalPlayerID = 0;
     }
     
     public void AddActor(Actor actor)
